@@ -1,0 +1,8 @@
+#!/bin/sh
+echo "Environments"
+python --version
+pip --version
+pip list | grep -i jwt
+
+
+

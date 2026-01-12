@@ -1,0 +1,9 @@
+#!/bin/sh
+reset
+python.exe -m pip cache purge  
+python -m pip install --upgrade pip
+./versions
+python -m venv venv
+source venv/Scripts/activate
+python -m venv .venv
+source ./venv/Scripts/activate

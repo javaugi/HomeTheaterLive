@@ -1,0 +1,10 @@
+#!/bin/sh
+reset
+echo "Running test ./tests/myapp.py"
+python ./tests/myapp.py
+echo "Running test ./tests/test_api.py"
+python ./tests/test_api.py
+echo "Running test ./tests/test_app.py"
+python ./tests/test_app.py
+echo "Running test ./tests/test_jwt.py"
+python ./tests/test_jwt.py

@@ -1,0 +1,8 @@
+#!/bin/sh
+pip install -r requirements.txt
+uv sync
+# pip install "fastapi[standard]"
+# python -m pip install sqlalchemy[asyncio]
+# python -m pip install sqlmodel[asyncio]
+
+

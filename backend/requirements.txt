@@ -1,0 +1,16 @@
+briefcase
+PyJWT[crypto]
+fastapi
+uvicorn
+sqlalchemy
+sqlmodel
+passlib[bcrypt]
+python-jose
+python-multipart
+starlette
+psycopg2-binary
+anyio
+pytest-asyncio
+pytest-tornasync
+pytest-trio
+pytest-twisted

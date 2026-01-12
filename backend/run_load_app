@@ -1,0 +1,4 @@
+#!/bin/sh
+reset
+uvicorn app.main:app --reload
+

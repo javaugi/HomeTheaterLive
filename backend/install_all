@@ -1,0 +1,19 @@
+#!/bin/sh
+reset
+# pip install briefcase
+# pip install "PyJWT[crypto]"
+pip install -r requirements.txt
+pip install bcrypt==4.1.2
+pip install --upgrade passlib[bcrypt]
+uv sync
+# pip install "fastapi[standard]"
+# python -m pip install sqlalchemy[asyncio]
+# python -m pip install sqlmodel[asyncio]
+# 📌 What each one does:
+# sqlalchemy → DB layer
+# passlib[bcrypt] → password hashing
+# python-jose → JWT
+# python-multipart → OAuth2 form parsing
+# fastapi → API
+# uvicorn → server
+

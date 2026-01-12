@@ -1,0 +1,4 @@
+#!/bin/sh
+reset
+pip install -r requirements.txt
+
