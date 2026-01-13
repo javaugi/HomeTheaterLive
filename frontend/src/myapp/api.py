@@ -123,6 +123,64 @@ class APIClient:
         r.raise_for_status()
         return r.json()            
 
+    async def get_user_profile(self):
+        """Get user profile info"""
+        if not self.access_token:
+            return None
+            
+        try:
+            response = await self.client.get(
+                f"{self.base_url}/api/v1/users/me",
+                headers={"Authorization": f"Bearer {self.access_token}"}
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"Error getting user profile: {e}")
+        return None
+    
+    async def get_continue_watching(self):
+        """Get continue watching items"""
+        try:
+            response = await self.client.get(
+                f"{self.base_url}/api/v1/watch/continue",
+                headers={"Authorization": f"Bearer {self.access_token}"}
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"Error getting continue watching: {e}")
+        return []
+    
+    async def get_recommendations(self, limit=10):
+        """Get content recommendations"""
+        try:
+            response = await self.client.get(
+                f"{self.base_url}/api/v1/recommendations",
+                params={"limit": limit},
+                headers={"Authorization": f"Bearer {self.access_token}"}
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"Error getting recommendations: {e}")
+        return []
+    
+
+    async def search_content(self, query, limit=20):
+        """Search for content"""
+        try:
+            response = await self.client.get(
+                f"{self.base_url}/api/v1/search",
+                params={"q": query, "limit": limit},
+                headers={"Authorization": f"Bearer {self.access_token}"}
+            )
+            if response.status_code == 200:
+                return response.json()
+        except Exception as e:
+            print(f"Error searching: {e}")
+        return []
+    
 """
 ✅ Correct Way (FastAPI + Mobile)
 1. Why your current call fails

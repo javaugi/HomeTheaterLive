@@ -1,0 +1,7 @@
+#!/bin/sh
+reset
+echo "Create Android build"
+# Create Android build
+briefcase create android
+briefcase build android
+briefcase run android

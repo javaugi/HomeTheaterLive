@@ -1,8 +1,8 @@
 version = 1
 revision = 3
-requires-python = ">=3.13, <4.0"
+requires-python = ">=3.13"
 
 [[package]]
-name = "home-theater-live"
-version = "0.1.0"
+name = "hometheaterlive"
+version = "0.0.1"
 source = { virtual = "." }

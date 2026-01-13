@@ -1,0 +1,6 @@
+#!/bin/sh
+echo "Running curl_health"
+./curl_health
+echo ""
+echo "Running curl_login"
+./curl_login

@@ -1,0 +1,8 @@
+#!/bin/sh
+reset
+echo "Create iOS build (requires macOS)"
+# Create iOS build (requires macOS)
+briefcase create ios
+briefcase build ios
+briefcase run ios
+

@@ -1,0 +1,6 @@
+#!/bin/sh
+reset
+./install_venv
+./install_all
+./run_seed_scripts
+./run_load_app
