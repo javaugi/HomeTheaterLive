@@ -1,7 +1,7 @@
 # Run the function to create the test user when the script is executed
 # backend/app/dev_seed.py
 from app.db.session import SessionLocal
-from app.models.user import User
+from app.model.user import User
 from app.core.security import get_password_hash
 
 def create_test_user():

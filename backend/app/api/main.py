@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.api.auth import router as auth_router
+#from app.api.auth import router as auth_router
 from app.db.session import engine
 from app.db.base import Base
 from app.api.router import api_router  # Import the router

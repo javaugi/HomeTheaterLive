@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
-from app.models.user import User
+from app.model.user import User
 from app.core.security import (
     verify_password,
     create_access_token
@@ -31,12 +31,6 @@ def create_access_token(sub: str, minutes: int):
         "jti": str(uuid.uuid4())
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGO)
-
-@router.post("/login_bk")
-def login_bk(username: str, password: str):
-    access = create_access_token(username, 15)
-    refresh = create_access_token(username, 43200)
-    return {"access_token": access, "refresh_token": refresh}
 
 """Option B — Temporary Dev Login (Quick Debug Only)
 If you just want to test UI quickly, modify:

@@ -1,7 +1,8 @@
 import sentry_sdk
-from fastapi import FastAPI, APIRouter
+#from fastapi import FastAPI
+from fastapi import APIRouter
 # IMPORTANT: import models FIRST
-from app.models import user  # noqa: F401
+from app.model import user  # noqa: F401
 
 from app.api.auth import router as auth_router
 from app.db.session import engine

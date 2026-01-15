@@ -85,7 +85,7 @@ class APIClient:
     async def _refresh(self):
         async with httpx.AsyncClient() as c:
             r = await c.post(
-                f"{BASE_URL}/auth/refresh",
+                f"{self.base_url}/auth/refresh",
                 json={"refresh_token": self.storage.refresh_token()}
             )
             r.raise_for_status()
@@ -95,6 +95,8 @@ class APIClient:
             )
 
     async def request(self, method, path, **kwargs):
+        print(f"APIClient.request: {method} {path} with kwargs: {kwargs.keys()}")
+
         if self.storage.is_access_expired():
             await self._refresh()
 
@@ -104,7 +106,7 @@ class APIClient:
         async with httpx.AsyncClient() as c:
             r = await c.request(
                 method,
-                f"{BASE_URL}{path}",
+                f"{self.base_url}{path}",
                 headers=headers,
                 **kwargs
             )
@@ -115,7 +117,7 @@ class APIClient:
             async with httpx.AsyncClient() as c:
                 r = await c.request(
                     method,
-                    f"{BASE_URL}{path}",
+                    f"{self.base_url}{path}",
                     headers=headers,
                     **kwargs
                 )
@@ -125,12 +127,13 @@ class APIClient:
 
     async def get_user_profile(self):
         """Get user profile info"""
+        print("Getting user profile")
         if not self.access_token:
             return None
             
         try:
             response = await self.client.get(
-                f"{self.base_url}/api/v1/users/me",
+                f"{self.base_url}/users/me",
                 headers={"Authorization": f"Bearer {self.access_token}"}
             )
             if response.status_code == 200:
@@ -143,7 +146,7 @@ class APIClient:
         """Get continue watching items"""
         try:
             response = await self.client.get(
-                f"{self.base_url}/api/v1/watch/continue",
+                f"{self.base_url}/watch/continue",
                 headers={"Authorization": f"Bearer {self.access_token}"}
             )
             if response.status_code == 200:
@@ -156,7 +159,7 @@ class APIClient:
         """Get content recommendations"""
         try:
             response = await self.client.get(
-                f"{self.base_url}/api/v1/recommendations",
+                f"{self.base_url}/recommendations",
                 params={"limit": limit},
                 headers={"Authorization": f"Bearer {self.access_token}"}
             )
@@ -171,7 +174,7 @@ class APIClient:
         """Search for content"""
         try:
             response = await self.client.get(
-                f"{self.base_url}/api/v1/search",
+                f"{self.base_url}/search",
                 params={"q": query, "limit": limit},
                 headers={"Authorization": f"Bearer {self.access_token}"}
             )

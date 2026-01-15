@@ -250,9 +250,10 @@ class HomeView(toga.Box):
         
         nav_items = [
             {"icon": "🏠", "label": "Home", "active": True},
-            {"icon": "🎬", "label": "Library"},
-            {"icon": "🔍", "label": "Search"},
-            {"icon": "👤", "label": "Profile"},
+            {"icon": "🎬", "label": "Library", "active": True},
+            {"icon": "🔍", "label": "Search", "active": True},
+            {"icon": "👤", "label": "Profile", "active": True},
+            {"icon": "🔒", "label": "Logout", "active": True},
         ]
         
         for item in nav_items:
@@ -417,6 +418,8 @@ class HomeView(toga.Box):
     async def _handle_nav_click(self, destination):
         """Handle bottom navigation clicks"""
         print(f"Navigate to: {destination}")
+        if destination == "logout":
+                await self.logout(None)        
     
     async def logout(self, widget):
         """Handle logout"""

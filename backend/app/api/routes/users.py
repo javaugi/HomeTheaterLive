@@ -38,7 +38,7 @@ def read_users(session: SessionDep, skip: int = 0, limit: int = 100) -> Any:
     """
     Retrieve users.
     """
-
+    print(f"read_users get users skip {skip} limit {limit}")
     count_statement = select(func.count()).select_from(User)
     count = session.exec(count_statement).one()
 
@@ -55,6 +55,7 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     """
     Create new user.
     """
+    print(f"create_user post user me id, {user_in.id}, email to {user_in.email}")
     user = crud.get_user_by_email(session=session, email=user_in.email)
     if user:
         raise HTTPException(
@@ -82,7 +83,7 @@ def update_user_me(
     """
     Update own user.
     """
-
+    print(f"update_user_me patch user me id, {current_user.id}, email to {user_in.id}, email to {user_in.email}")
     if user_in.email:
         existing_user = crud.get_user_by_email(session=session, email=user_in.email)
         if existing_user and existing_user.id != current_user.id:
@@ -104,6 +105,7 @@ def update_password_me(
     """
     Update own password.
     """
+    print(f"update_password_me patch user me id, {current_user.id}, email to {current_user.email}")
     if not verify_password(body.current_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect password")
     if body.current_password == body.new_password:
@@ -122,6 +124,7 @@ def read_user_me(current_user: CurrentUser) -> Any:
     """
     Get current user.
     """
+    print(f"read_user_me get user me id, {current_user.id}, email to {current_user.email}")
     return current_user
 
 
@@ -130,6 +133,7 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     """
     Delete own user.
     """
+    print(f"delete_user_me delete user me id, {current_user.id}, email to {current_user.email}")
     if current_user.is_superuser:
         raise HTTPException(
             status_code=403, detail="Super users are not allowed to delete themselves"
@@ -144,6 +148,7 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     """
     Create new user without the need to be logged in.
     """
+    print(f"register_user post user me id, {user_in.id}, email to {user_in.email}")
     user = crud.get_user_by_email(session=session, email=user_in.email)
     if user:
         raise HTTPException(
@@ -162,6 +167,7 @@ def read_user_by_id(
     """
     Get a specific user by id.
     """
+    print(f"read_user_by_id get user by id, {user_id}, current user id {current_user.id}, email to {current_user.email}")
     user = session.get(User, user_id)
     if user == current_user:
         return user
@@ -187,7 +193,7 @@ def update_user(
     """
     Update a user.
     """
-
+    print(f"update_user patch user by id, {user_id}, current user id {user_in.id}, email to {user_in.email}")
     db_user = session.get(User, user_id)
     if not db_user:
         raise HTTPException(
@@ -212,6 +218,7 @@ def delete_user(
     """
     Delete a user.
     """
+    print(f"delete_user delete user by id, {user_id}, current user id {current_user.id}, email to {current_user.email}")
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

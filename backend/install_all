@@ -1,10 +1,8 @@
 #!/bin/sh
 reset
-# pip install briefcase
-# pip install "PyJWT[crypto]"
 pip install -r requirements.txt
-pip install bcrypt==4.1.2
 pip install --upgrade passlib[bcrypt]
+pip install "psycopg[binary]"
 uv sync
 # pip install "fastapi[standard]"
 # python -m pip install sqlalchemy[asyncio]
