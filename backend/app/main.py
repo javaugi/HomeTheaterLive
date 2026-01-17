@@ -1,31 +1,30 @@
+#backend/app/main.py
 import sentry_sdk
-#from fastapi import FastAPI
-from fastapi import APIRouter
-# IMPORTANT: import models FIRST
-from app.model import user  # noqa: F401
+from fastapi import FastAPI, APIRouter, Request
 
-from app.api.auth import router as auth_router
 from app.db.session import engine
 from app.db.base import Base
 from starlette.middleware.cors import CORSMiddleware
-from app.api.main import api_router
 from app.core.config import settings
-from app.api.main import app
 
-# app = FastAPI(
-#     title=settings.PROJECT_NAME,
-#     openapi_url=f"{settings.API_V1_STR}/openapi.json",
-#     generate_unique_id_function=custom_generate_unique_id,
-# )
+from app.api import main, auth
+
 # NOW tables will be created
 Base.metadata.create_all(bind=engine)
-app.include_router(auth_router, prefix="/api/v1")
 
 def custom_generate_unique_id(route: APIRouter) -> str:
     return f"{route.tags[0]}-{route.name}"
 
 if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
     sentry_sdk.init(dsn=str(settings.SENTRY_DSN), enable_tracing=True)
+
+app = FastAPI(
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+    generate_unique_id_function=custom_generate_unique_id,
+)
+app.include_router(auth.router, prefix=settings.API_V1_STR)
+app.include_router(main.router, prefix=settings.API_V1_STR)
 
 # Set all CORS enabled origins
 if settings.all_cors_origins:
@@ -37,4 +36,8 @@ if settings.all_cors_origins:
         allow_headers=["*"],
     )
 
-app.include_router(api_router, prefix=settings.API_V1_STR)
+@app.middleware("http")
+async def log_auth(request: Request, call_next):
+    auth = request.headers.get("authorization")
+    print("backend/app/main.py log_auth AUTH HEADER:", auth)
+    return await call_next(request)

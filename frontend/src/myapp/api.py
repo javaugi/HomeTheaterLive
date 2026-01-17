@@ -145,6 +145,7 @@ class APIClient:
     async def get_continue_watching(self):
         """Get continue watching items"""
         try:
+            print(f"api get_continue_watching Bearer {self.access_token} ")
             response = await self.client.get(
                 f"{self.base_url}/watch/continue",
                 headers={"Authorization": f"Bearer {self.access_token}"}
@@ -158,8 +159,9 @@ class APIClient:
     async def get_recommendations(self, limit=10):
         """Get content recommendations"""
         try:
+            print(f"api get_continue_watching Bearer {self.access_token} ")
             response = await self.client.get(
-                f"{self.base_url}/recommendations",
+                f"{self.base_url}/recommendations/",
                 params={"limit": limit},
                 headers={"Authorization": f"Bearer {self.access_token}"}
             )

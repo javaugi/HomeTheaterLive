@@ -1,6 +1,6 @@
-
-from datetime import datetime, timedelta
-import jwt, uuid
+# backend/app/api/auth.py
+import jwt
+#, uuid
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -24,13 +24,13 @@ def get_db():
     finally:
         db.close()
 
-def create_access_token(sub: str, minutes: int):
-    payload = {
-        "sub": sub,
-        "exp": datetime.now() + timedelta(minutes=minutes),
-        "jti": str(uuid.uuid4())
-    }
-    return jwt.encode(payload, SECRET_KEY, algorithm=ALGO)
+#def create_access_token(sub: str, minutes: int):
+#    payload = {
+#        "sub": sub,
+#        "exp": datetime.now() + timedelta(minutes=minutes),
+#        "jti": str(uuid.uuid4())
+#    }
+#    return jwt.encode(payload, SECRET_KEY, algorithm=ALGO)
 
 """Option B — Temporary Dev Login (Quick Debug Only)
 If you just want to test UI quickly, modify:

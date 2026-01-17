@@ -1,12 +1,12 @@
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import jwt
+import jwt, uuid
 from passlib.context import CryptContext
 import bcrypt
 from app.core.config import settings
 
-ALGORITHM = "HS256"
+#ALGORITHM = "HS256"
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Or keep using pwd_context but with bcryptpbkdf
@@ -37,12 +37,20 @@ def hash_password(password: str) -> str:
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     return hashed.decode('utf-8')
 
-def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
-    expire = datetime.now(timezone.utc) + expires_delta
-    to_encode = {"exp": expire, "sub": str(subject)}
-    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+#def create_access_token(subject: str | Any, expires_delta: timedelta) -> str:
+#    expire = datetime.now(timezone.utc) + expires_delta
+#    to_encode = {"exp": expire, "sub": str(subject)}
+#    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+#    return encoded_jwt
 
+def create_access_token(subject: str | Any, minutes: int):
+    expire = datetime.now() + timedelta(minutes=minutes)    
+    payload = {
+        "sub": subject,
+        "exp": expire,
+        "jti": str(uuid.uuid4())
+    }
+    return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 # def verify_password(plain_password: str, hashed_password: str) -> bool:
 #     return pwd_context.verify(plain_password, hashed_password)

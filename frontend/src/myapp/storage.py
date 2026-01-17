@@ -16,8 +16,7 @@ class SecureStorage:
                 print(f"App already has _tokens: {list(app._tokens.keys())}")
         
     def save_tokens(self, access, refresh):
-        print(f"SecureStorage.save_tokens() called")
-        print(f"App instance: {self.app}")
+        print(f"SecureStorage.save_tokens() called App instance: {self.app}")
         
         if not self.app:
             print("WARNING: No app instance, tokens won't persist!")

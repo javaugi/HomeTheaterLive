@@ -1,7 +1,11 @@
 # app/api/__init__.py
 from fastapi import APIRouter
 from app.api import auth
+from app.api.routes import watch, recommendations
 
-api_router = APIRouter()
+router = APIRouter(tags=["init"])
 
-api_router.include_router(auth.router, prefix="/auth", tags=["auth"])
+
+router.include_router(auth.router, prefix="/auth", tags=["auth"])
+router.include_router(watch.router)
+router.include_router(recommendations.router)
