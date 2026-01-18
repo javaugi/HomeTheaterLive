@@ -17,10 +17,10 @@ class SecureStorage:
                 print(f"#frontend/src/myapp/storage.py App already has _tokens: {list(app._tokens.keys())}")
         
     def save_tokens(self, access, refresh, token_type='bearer'):
-        print(f"SecureStorage.save_tokens() called App instance: {self.app}")
+        print(f"#frontend/src/myapp/storage.py SecureStorage.save_tokens() called App instance: {self.app}")
         
         if not self.app:
-            print("WARNING: No app instance, tokens won't persist!")
+            print("#frontend/src/myapp/storage.py WARNING: No app instance, tokens won't persist!")
             self.app = toga.App.app # Ensure this isn't None
             #return
         
@@ -28,7 +28,7 @@ class SecureStorage:
             # Decode JWT to get expiration
             payload = jwt.decode(access, options={"verify_signature": False})
             exp = payload["exp"]
-            print(f"Token expires at: {exp} (current time: {time.time()})")
+            print(f"#frontend/src/myapp/storage.py Token expires at: {exp} (current time: {time.time()})")
         except Exception as e:
             print(f"Could not decode token: {e}")
             exp = 0
@@ -47,24 +47,24 @@ class SecureStorage:
         #    'exp': exp
         #})
         
-        print(f"Tokens saved to app._tokens. Keys: {list(self.app._tokens.keys())}, self.app._tokens={self.app._tokens}")
+        print(f"#frontend/src/myapp/storage.py Tokens saved to app._tokens. Keys: {list(self.app._tokens.keys())}, self.app._tokens={self.app._tokens}")
     
     def access_token(self):
         if self.app and hasattr(self.app, '_tokens'):
             token = self.app._tokens.get('access')
             print(f"#frontend/src/myapp/storage.py access_token() called. Found token: {token is not None}, self.app._tokens={self.app._tokens}")
             return token
-        print("access_token() called. No app or _tokens")
+        print("#frontend/src/myapp/storage.py access_token() called. No app or _tokens")
         return None
     
     def is_access_expired(self):
         if not self.app or not hasattr(self.app, '_tokens'):
-            print("is_access_expired(): No tokens, returning True")
+            print("#frontend/src/myapp/storage.py is_access_expired(): No tokens, returning True")
             return True
         
         exp = self.app._tokens.get('exp', 0)
         is_expired = time.time() > exp - 30
-        print(f"is_access_expired(): exp={exp}, current={time.time()}, expired={is_expired}")
+        print(f"#frontend/src/myapp/storage.py is_access_expired(): exp={exp}, current={time.time()}, expired={is_expired}")
         return is_expired
         
     def refresh_token(self):
@@ -88,5 +88,6 @@ class SecureStorage:
     
     def clear(self):
         """Clear stored tokens"""
+        print(f"#frontend/src/myapp/storage.py clear() token: {self.app._tokens}")
         if self.app and hasattr(self.app, '_tokens'):
             self.app._tokens.clear()

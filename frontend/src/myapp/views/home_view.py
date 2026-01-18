@@ -234,7 +234,7 @@ class HomeView(toga.Box):
         title_label = toga.Label(
             title,
             style=Pack(
-                padding=10,
+                margin=10,
                 color="white",
                 font_size=12
             )

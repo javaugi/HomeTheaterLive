@@ -4,7 +4,7 @@ Handles API requests, auto-attaches tokens, refreshes on 401.
 """
 import httpx
 import json
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 from .storage import SecureStorage
 
 #BASE_URL = "https://api.example.com/api/v1"
@@ -48,23 +48,23 @@ class APIClient:
             
             # Check if response is valid JSON
             if r.status_code != 200:
-                print(f"Error: Received status {r.status_code}")
+                print(f"frontend/src/myapp/api.py Error: Received status {r.status_code}")
                 # Try to parse as JSON if possible, otherwise use text
                 try:
                     error_data = r.json()
-                    print(f"Error JSON: {error_data}")
+                    print(f"frontend/src/myapp/api.py Error JSON: {error_data}")
                 except:
-                    print(f"Error Text: {r.text}")
+                    print(f"frontend/src/myapp/api.py Error Text: {r.text}")
                 return {"success": False, "error": f"HTTP {r.status_code}"}
             
             data = r.json()
-            print(f"Login successful, response: {data} , response keys: {list(data.keys())}")
+            print(f"frontend/src/myapp/api.py Login successful, response: {data} , response keys: {list(data.keys())}")
 
             # r.status_code = 200  # For testing purposes only                        
             if "access_token" in data:
                 self.storage.save_tokens(data["access_token"], data["refresh_token"])   
                 self.access_token = data["access_token"]
-                print(f"Access token set and saved: {self.access_token[:20]}...")
+                print(f"frontend/src/myapp/api.py Access token set and saved: {self.access_token[:20]}...")
             
             return {"success": True, **data}            
         except json.JSONDecodeError as e:
