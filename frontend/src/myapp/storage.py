@@ -1,4 +1,5 @@
-# storage.py
+#frontend/src/myapp/storage.py
+import toga
 import time
 import jwt
 
@@ -11,16 +12,17 @@ class SecureStorage:
             # Initialize tokens storage on app
             if not hasattr(app, '_tokens'):
                 app._tokens = {}
-                print("Created new _tokens dict on app")
+                print("#frontend/src/myapp/storage.py Created new _tokens dict on app")
             else:
-                print(f"App already has _tokens: {list(app._tokens.keys())}")
+                print(f"#frontend/src/myapp/storage.py App already has _tokens: {list(app._tokens.keys())}")
         
-    def save_tokens(self, access, refresh):
+    def save_tokens(self, access, refresh, token_type='bearer'):
         print(f"SecureStorage.save_tokens() called App instance: {self.app}")
         
         if not self.app:
             print("WARNING: No app instance, tokens won't persist!")
-            return
+            self.app = toga.App.app # Ensure this isn't None
+            #return
         
         try:
             # Decode JWT to get expiration
@@ -31,19 +33,26 @@ class SecureStorage:
             print(f"Could not decode token: {e}")
             exp = 0
         
+        # Store as a dictionary
+        self.app._tokens = {
+            'access_token': access,
+            'refresh_token': refresh,
+            'token_type': token_type,
+            'exp': exp            
+        }
         # Save to app's _tokens dict
-        self.app._tokens.update({
-            'access': access,
-            'refresh': refresh,
-            'exp': exp
-        })
+        #self.app._tokens.update({
+        #    'access': access,
+        #    'refresh': refresh,
+        #    'exp': exp
+        #})
         
-        print(f"Tokens saved to app._tokens. Keys: {list(self.app._tokens.keys())}")
+        print(f"Tokens saved to app._tokens. Keys: {list(self.app._tokens.keys())}, self.app._tokens={self.app._tokens}")
     
     def access_token(self):
         if self.app and hasattr(self.app, '_tokens'):
             token = self.app._tokens.get('access')
-            print(f"access_token() called. Found token: {token is not None}")
+            print(f"#frontend/src/myapp/storage.py access_token() called. Found token: {token is not None}, self.app._tokens={self.app._tokens}")
             return token
         print("access_token() called. No app or _tokens")
         return None

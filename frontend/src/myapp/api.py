@@ -1,4 +1,4 @@
-
+#frontend/src/myapp/api.py
 """2️⃣ API Interceptor (Auto-Attach Token + Retry) - (Interceptor Pattern)
 Handles API requests, auto-attaches tokens, refreshes on 401.
 """
@@ -17,9 +17,10 @@ class APIClient:
     def __init__(self, app=None, base_url: str = BASE_URL):
         self.base_url = base_url
         self.client = httpx.AsyncClient()
-        self.access_token: Optional[str] = None
         self.app = app  # Store app reference
-        self.storage = SecureStorage(app)  # Pass app to storage
+        self.storage = SecureStorage(self.app)  # Pass app to storage
+        self.access_token = self.storage.access_token()
+        print(f"frontend/src/myapp/api.py APIClient init self.access_token= {self.access_token}")
         
     async def login(self, username: str, password: str) -> Dict[str, Any]:
         url = f"{self.base_url}/auth/login"
@@ -36,7 +37,7 @@ class APIClient:
             "Content-Type": "application/x-www-form-urlencoded"
         }
 
-        print(f"Attempting login to: {url}, Data: {data}, Headers: {headers}")
+        print(f"frontend/src/myapp/api.py Attempting login to: {url}, Data: {data}, Headers: {headers}")
         
         try:
             r = await self.client.post(url, data=data, headers=headers)
@@ -58,15 +59,12 @@ class APIClient:
             
             data = r.json()
             print(f"Login successful, response: {data} , response keys: {list(data.keys())}")
-            self.storage.save_tokens(data["access_token"], data["refresh_token"])   
-            self.access_token = data["access_token"]
-            print(f"Access token set and saved: {self.access_token[:20]}...")
 
-            # r.status_code = 200  # For testing purposes only            
-            
+            # r.status_code = 200  # For testing purposes only                        
             if "access_token" in data:
+                self.storage.save_tokens(data["access_token"], data["refresh_token"])   
                 self.access_token = data["access_token"]
-                print(f"Access token set: {self.access_token[:20]}...")
+                print(f"Access token set and saved: {self.access_token[:20]}...")
             
             return {"success": True, **data}            
         except json.JSONDecodeError as e:
@@ -127,7 +125,7 @@ class APIClient:
 
     async def get_user_profile(self):
         """Get user profile info"""
-        print("Getting user profile")
+        print(f"frontend/src/myapp/api.py APIClient get_user_profile self.access_token= {self.access_token}")
         if not self.access_token:
             return None
             
@@ -145,11 +143,12 @@ class APIClient:
     async def get_continue_watching(self):
         """Get continue watching items"""
         try:
-            print(f"api get_continue_watching Bearer {self.access_token} ")
+            print(f"frontend/src/myapp/api.py api get_continue_watching Bearer {self.access_token} ")
             response = await self.client.get(
                 f"{self.base_url}/watch/continue",
                 headers={"Authorization": f"Bearer {self.access_token}"}
             )
+            print(f"frontend/src/myapp/api.py api get_continue_watching response.status_code={response.status_code} ")
             if response.status_code == 200:
                 return response.json()
         except Exception as e:
@@ -159,12 +158,13 @@ class APIClient:
     async def get_recommendations(self, limit=10):
         """Get content recommendations"""
         try:
-            print(f"api get_continue_watching Bearer {self.access_token} ")
+            print(f"frontend/src/myapp/api.py api get_recommendations Bearer {self.access_token} ")
             response = await self.client.get(
                 f"{self.base_url}/recommendations/",
                 params={"limit": limit},
                 headers={"Authorization": f"Bearer {self.access_token}"}
             )
+            print(f"frontend/src/myapp/api.py api get_recommendations response.status_code={response.status_code} ")
             if response.status_code == 200:
                 return response.json()
         except Exception as e:
@@ -175,6 +175,7 @@ class APIClient:
     async def search_content(self, query, limit=20):
         """Search for content"""
         try:
+            print(f"frontend/src/myapp/api.py api search_content Bearer {self.access_token} ")
             response = await self.client.get(
                 f"{self.base_url}/search",
                 params={"q": query, "limit": limit},

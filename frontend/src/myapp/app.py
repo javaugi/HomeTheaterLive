@@ -1,15 +1,19 @@
-
+#frontend/src/myapp/app.py
 """
 My Home Theater Application to manipulate photos, images, videos and films with integated AI functions
 """
 import toga
 from .storage import SecureStorage
 from .views.login import LoginView
-from .views.home import HomeView
+from .views.home_view import HomeView
 
 class MyHomeTheater(toga.App):
     def startup(self):
         print("App starting up...")
+        SecureStorage.app = self   # 🔥 REQUIRED
+        self._tokens = {}        
+        self.home_view = HomeView(self)
+        self.login_view = LoginView(self)
         self.main_window = toga.MainWindow(title=self.formal_name)
 
         # Set the app instance BEFORE creating storageif the singleton pattern is used
@@ -22,10 +26,10 @@ class MyHomeTheater(toga.App):
 
         if storage.access_token() and not storage.is_access_expired():
             print("User authenticated, loading HomeView")
-            self.main_window.content = HomeView(self)
+            self.main_window.content = self.home_view
         else:
             print("User not authenticated, loading LoginView")
-            self.main_window.content = LoginView(self)
+            self.main_window.content = self.login_view
 
         self.main_window.show()
 

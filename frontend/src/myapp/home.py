@@ -1,12 +1,13 @@
+#frontend/src/myapp/home.py
 import toga
 from toga.style import Pack
-from toga.style.pack import COLUMN, ROW
+from toga.style.pack import COLUMN
 from .api import APIClient
 from .storage import SecureStorage
 from .views.login import LoginView
 
 
-class HomeView(toga.Box):
+class Home(toga.Box):
 
     def __init__(self, app):
         super().__init__(style=Pack(direction=COLUMN, padding=20, spacing=10))
@@ -14,6 +15,10 @@ class HomeView(toga.Box):
         self.api = APIClient()
         self.storage = SecureStorage()
 
+        self.access_token = self.storage.get_access()        
+        # Debug log
+        print(f"#frontend/src/myapp/home.py Loading profile Home token: {self.access_token}")
+        
         # UI elements
         self.status = toga.Label("Loading profile...")
         self.email = toga.Label("")
@@ -33,11 +38,12 @@ class HomeView(toga.Box):
         )
 
         # Load data asynchronously
-        app.add_background_task(self.load_profile)
+        self.app.add_background_task(self.load_profile)
 
     async def load_profile(self, widget=None):
         try:
             profile = await self.api.request("GET", "/users/me")
+            print(f"#frontend/src/myapp/home.py profile={profile}")
 
             self.status.text = "Welcome!"
             self.email.text = f"Email: {profile.get('email', '')}"

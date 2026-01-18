@@ -1,4 +1,4 @@
-
+#frontend/src/myapp/views/login.py
 import toga
 from toga.style import Pack
 from toga.style.pack import COLUMN
@@ -7,9 +7,12 @@ from myapp.api import APIClient
 class LoginView(toga.Box):
     def __init__(self, app):
         super().__init__(style=Pack(direction=COLUMN, padding=20))
+        self.app = app
         #self.api = APIClient()
         # Create API client with app instance
-        self.api = APIClient(app=self.app)        
+        self.api = APIClient(app=self.app)     
+        from .home_view import HomeView
+        self.home_view = HomeView(self.app)
 
         # Create UI elements
         self.label = toga.Label("Login to MyHomeTheater", style=Pack(font_size=20, padding_bottom=20))
@@ -29,7 +32,7 @@ class LoginView(toga.Box):
     async def login(self, widget):
         username = self.user.value.strip()
         password = self.pwd.value.strip()
-        print(f"Attempting login with username: {username}")
+        print(f"frontend/src/myapp/views/login.py Attempting login with username: {username}")
         
         if not username or not password:
             self.error_label.text = "Please enter username and password"
@@ -41,13 +44,12 @@ class LoginView(toga.Box):
         result = await self.api.login(username, password)
         
         if result.get("success"):
-            print("Login successful, switching to HomeView")
+            print("frontend/src/myapp/views/login.py Login successful, switching to HomeView")
             # Switch to HomeView
-            #from .home import HomeView
-            #self.app.main_window.content = HomeView(self.app)
-            from .. import views
-            self.app.main_window.content = views.get_home_view(self.app)
+            self.app.main_window.content = self.home_view
+            #from .. import views
+            #self.app.main_window.content = views.get_home_view(self.app)
         else:
-            self.error_label.text = f"Login failed: {result.get('error', 'Unknown error')}"
+            self.error_label.text = f"frontend/src/myapp/views/login.py Login failed: {result.get('error', 'Unknown error')}"
             self.btn.enabled = True
             self.btn.label = "Login"
