@@ -23,7 +23,7 @@ dependencies = [
     "pyjwt<3.0.0,>=2.8.0",
 ]
 
-[ependency-groups]
+[dependency-groups]
 dev = [
     "pytest<8.0.0,>=7.4.3",
     "mypy<2.0.0,>=1.8.0",
