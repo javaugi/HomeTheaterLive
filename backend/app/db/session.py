@@ -1,15 +1,17 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from app.core.config import settings
+from sqlalchemy.ext.declarative import declarative_base
 
 # DATABASE_URL = "sqlite:///./app.db"
-DATABASE_URL = (
-    "postgresql+psycopg2://mht_dev_user:mht_dev_pwd_108@localhost:5432/PG_MHT_DEV"
-)
+#DATABASE_URL = (
+#    "postgresql+psycopg2://mht_dev_user:mht_dev_pwd_108@localhost:5432/PG_MHT_DEV"
+#)
 
 
 engine = create_engine(
-    DATABASE_URL
-    # , connect_args={"check_same_thread": False}
+    str(settings.SQLALCHEMY_DATABASE_URI),
+    connect_args={"check_same_thread": False} if "PostgresDsn" in str(settings.SQLALCHEMY_DATABASE_URI) else {}
 )
 
 SessionLocal = sessionmaker(
@@ -17,6 +19,10 @@ SessionLocal = sessionmaker(
     autoflush=False,
     bind=engine
 )
+
+Base = declarative_base()
+
+
 def get_db():
     db = SessionLocal()
     try:

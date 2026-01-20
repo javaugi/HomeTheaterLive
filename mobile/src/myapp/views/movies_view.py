@@ -32,7 +32,7 @@ class MoviesView(toga.Box):
     def _create_movies_grid(self):
         # Create scrollable grid of movies
         scroll = toga.ScrollContainer(style=Pack(flex=1))
-        grid = toga.Box(style=Pack(direction=COLUMN, padding=20))
+        grid = toga.Box(style=Pack(direction=COLUMN, margin=20))
         
         # Add movie cards (would be populated from API)
         for i in range(20):
@@ -45,7 +45,7 @@ class MoviesView(toga.Box):
     def _create_movie_card(self, title):
         card = toga.Box(style=Pack(
             direction=ROW,
-            padding=10,
+            margin=10,
             background_color="#2d3047",
             margin_bottom=10, 
             # border_radius=10
@@ -60,7 +60,7 @@ class MoviesView(toga.Box):
         ))
         
         # Info
-        info_box = toga.Box(style=Pack(direction=COLUMN, padding_left=15, flex=1))
+        info_box = toga.Box(style=Pack(direction=COLUMN, margin_left=15, flex=1))
         
         title_label = toga.Label(
             title,
@@ -69,7 +69,7 @@ class MoviesView(toga.Box):
         
         details = toga.Label(
             "2024 • 2h 15m • Action",
-            style=Pack(color="#8a8d93", font_size=12, padding_top=5)
+            style=Pack(color="#8a8d93", font_size=12, margin_top=5)
         )
         
         play_btn = toga.Button(
@@ -78,7 +78,7 @@ class MoviesView(toga.Box):
             style=Pack(
                 background_color="#ff3366",
                 color="white",
-                padding=5,
+                margin=5,
                 width=80,
                 margin_top=10
             )
@@ -99,5 +99,5 @@ class MoviesView(toga.Box):
         self.app.main_window.content = PlayerView(self.app, media_item)
     
     def _go_back(self):
-        from .home import HomeView
+        from .home_view import HomeView
         self.app.main_window.content = HomeView(self.app)

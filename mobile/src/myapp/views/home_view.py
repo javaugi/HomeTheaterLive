@@ -91,6 +91,7 @@ class HomeView(toga.Box):
         ))
         
         actions = [
+            {"icon": "📁", "label": "Video", "action": self.process_video},
             {"icon": "▶️", "label": "Play", "action": self.play_content},
             {"icon": "🎬", "label": "Movies", "action": self.show_movies},
             {"icon": "📺", "label": "TV Shows", "action": self.show_tv_shows},
@@ -354,6 +355,18 @@ class HomeView(toga.Box):
         pass
     
     # ====== EVENT HANDLERS ======
+    
+    async def process_video(self, widget):
+        """Handle video button press"""
+        from .video_view import Image2VideoApp
+        # You might want to pass actual media data here
+        media_item = {
+            'title': 'Demo Video',
+            'duration': 3600,  # 1 hour
+            'current_time': 0
+        }
+        self.app.main_window.content = Image2VideoApp(self.app)
+
     
     async def play_content(self, widget):
         """Handle play button press"""

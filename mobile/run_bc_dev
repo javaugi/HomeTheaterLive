@@ -1,0 +1,17 @@
+#!/bin/sh
+reset
+echo "Running dev: briefcase dev"
+briefcase dev
+
+# Create project structure
+#briefcase create
+
+# Build for iOS
+#briefcase build ios
+
+# Build for Android
+#briefcase build android
+
+# Run in simulator
+#briefcase run ios
+#briefcase run android

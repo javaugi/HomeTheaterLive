@@ -1,3 +1,4 @@
+#backend/app/api/endpoints.py
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
 from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from typing import List, Optional
@@ -68,7 +69,7 @@ async def process_directory(
 @router.post("/process/upload", response_model=VideoResponse)
 async def process_uploaded_images(
         files: List[UploadFile] = File(...),
-        settings: str = Form(default='{}'),
+        #settings: str = Form(default='{}'),
         background_tasks: BackgroundTasks = None
 ):
     """Process uploaded images"""
@@ -199,6 +200,7 @@ async def process_video_task(job_id: str, directory_path: str, settings: VideoSe
             transition_type=settings.transition_type,
             duration_per_image=settings.duration_per_image
         )
+        print(f"backend/app/api/endpoints.py process_video_task 1 video_path={video_path}")
 
         # Use the directory method
         video_path = video_processor.create_video_from_directory(
@@ -208,7 +210,8 @@ async def process_video_task(job_id: str, directory_path: str, settings: VideoSe
             output_filename=output_filename,
             transition_type=settings.transition_type,
             duration_per_image=settings.duration_per_image
-        )
+        )        
+        print(f"backend/app/api/endpoints.py process_video_task 2 video_path={video_path}")
 
         # Update status
         processing_status[job_id]["status"] = "completed"
@@ -239,6 +242,7 @@ async def process_upload_task(job_id: str, image_paths: List[str], settings: Vid
             transition_type=settings.transition_type,
             duration_per_image=settings.duration_per_image
         )
+        print(f"backend/app/api/endpoints.py process_upload_task video_path={video_path}")
 
         processing_status[job_id]["status"] = "completed"
         processing_status[job_id]["progress"] = 100

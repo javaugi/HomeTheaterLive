@@ -25,7 +25,7 @@ class DevicesView(toga.Box):
         # Top bar with back button
         top_bar = toga.Box(style=Pack(
             direction=ROW,
-            padding=20,
+            margin=20,
             background_color="#000000"
         ))
         
@@ -41,7 +41,7 @@ class DevicesView(toga.Box):
                 flex=1,
                 color="white",
                 font_size=18,
-                text_align=CENTER
+                text_align="center"
             )
         )
         

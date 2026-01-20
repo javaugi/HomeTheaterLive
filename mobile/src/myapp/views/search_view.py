@@ -27,7 +27,7 @@ class SearchView(toga.Box):
         
         self.search_input = toga.TextInput(
             placeholder="Search movies, shows, actors...",
-            style=Pack(flex=1, margin_left=15, padding=10)
+            style=Pack(flex=1, margin_left=15, margin=10)
         )
         
         search_btn = toga.Button(
@@ -41,7 +41,7 @@ class SearchView(toga.Box):
         
         # Results container
         self.results_container = toga.ScrollContainer(style=Pack(flex=1))
-        self.results_content = toga.Box(style=Pack(direction=COLUMN, padding=20))
+        self.results_content = toga.Box(style=Pack(direction=COLUMN, margin=20))
         self.results_container.content = self.results_content
         self.add(self.results_container)
     
@@ -54,7 +54,7 @@ class SearchView(toga.Box):
         self.results_content.children.clear()
         
         # Show loading
-        loading = toga.Label("Searching...", style=Pack(padding=20, text_align=CENTER))
+        loading = toga.Label("Searching...", style=Pack(margin=20, text_align="center"))
         self.results_content.add(loading)
         
         # Perform search
@@ -70,7 +70,7 @@ class SearchView(toga.Box):
         else:
             no_results = toga.Label(
                 "No results found",
-                style=Pack(padding=20, text_align=CENTER, color="#8a8d93")
+                style=Pack(margin=20, text_align="center", color="#8a8d93")
             )
             self.results_content.add(no_results)
     
@@ -79,5 +79,5 @@ class SearchView(toga.Box):
         pass
     
     def _go_back(self):
-        from .home import HomeView
+        from .home_view import HomeView
         self.app.main_window.content = HomeView(self.app)

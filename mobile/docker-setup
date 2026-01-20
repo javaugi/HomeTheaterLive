@@ -1,0 +1,9 @@
+#!/bin/sh
+
+echo "placeholder for docker setup"
+
+# Start all services
+#docker-compose up -d
+
+# View logs
+#docker-compose logs -f

@@ -3,14 +3,14 @@ from toga.style import Pack
 from toga.style.pack import COLUMN, ROW, CENTER
 import asyncio
 
-class TVShowsView(toga.Box):
+class NotificationsView(toga.Box):
     def __init__(self, app, media_item=None):
         super().__init__(style=Pack(direction=COLUMN, flex=1))
         self.app = app
         self.media_item = media_item or {}
         
         # Create UI
-        self._create_tv_shows_ui()
+        self._create_notifications_ui()
         
         # Schedule layout update
         asyncio.create_task(self._wait_for_layout())
@@ -20,12 +20,12 @@ class TVShowsView(toga.Box):
         """Wait for layout to be ready to get actual dimensions"""
         await asyncio.sleep(0.1)  # Small delay for layout        
 
-    async def _create_tv_shows_ui(self):
+    async def _create_notifications_ui(self):
         """Create player UI with pixel-based progress bar"""
         # Top bar with back button
         top_bar = toga.Box(style=Pack(
             direction=ROW,
-            padding=20,
+            margin=20,
             background_color="#000000"
         ))
         
@@ -41,7 +41,7 @@ class TVShowsView(toga.Box):
                 flex=1,
                 color="white",
                 font_size=18,
-                text_align=CENTER
+                text_align="center"
             )
         )
         

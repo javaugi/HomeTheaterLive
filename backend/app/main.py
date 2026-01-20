@@ -9,8 +9,23 @@ from app.core.config import settings
 
 from app.api import main, auth
 
+from contextlib import asynccontextmanager
+from fastapi.staticfiles import StaticFiles
+import os
+
 # NOW tables will be created
 Base.metadata.create_all(bind=engine)
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    print("Starting Image2Video Backend...")
+    print(f"DEBUG: Current Working Directory: {os.getcwd()}")
+    print(f"DEBUG: Looking for STATIC_DIR  directory at: {os.path.abspath(settings.STATIC_DIR)}")    
+    print(f"DEBUG: Looking for UPLOAD_DIRs directory at: {os.path.abspath(settings.UPLOAD_DIR)}")    
+    yield
+    # Shutdown
+    print("Shutting down...")
 
 def custom_generate_unique_id(route: APIRouter) -> str:
     return f"{route.tags[0]}-{route.name}"
@@ -20,9 +35,15 @@ if settings.SENTRY_DSN and settings.ENVIRONMENT != "local":
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
+    description="API for images and photos, as well as converting images to video",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=custom_generate_unique_id,
+    lifespan=lifespan    
 )
+
 app.include_router(auth.router, prefix=settings.API_V1_STR)
 app.include_router(main.router, prefix=settings.API_V1_STR)
 
@@ -35,6 +56,9 @@ if settings.all_cors_origins:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+# Mount static files directory
+app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
 
 @app.middleware("http")
 async def log_auth(request: Request, call_next):

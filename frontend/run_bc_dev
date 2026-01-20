@@ -1,5 +1,0 @@
-#!/bin/sh
-reset
-echo "Running dev: briefcase dev"
-briefcase dev
-

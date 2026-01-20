@@ -1,6 +1,6 @@
 import secrets
 import warnings
-from typing import Annotated, Any, Literal, List
+from typing import Annotated, Any, Literal, List, ClassVar
 
 from pydantic import (
     AnyUrl,
@@ -14,6 +14,7 @@ from pydantic import (
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from typing_extensions import Self
 
+from pathlib import Path
 
 def parse_cors(v: Any) -> list[str] | str:
     if isinstance(v, str) and not v.startswith("["):
@@ -37,8 +38,20 @@ class Settings(BaseSettings):
     # SECRET_KEY: str = "your-secret-key-here-change-in-production"
     # ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     #file upload
-    UPLOAD_DIR: str = "uploads"
-    STATIC_DIR: str = "static"
+    
+    # This gets the directory where main.py (or config.py) lives
+    BASE_DIR: ClassVar[Path] = Path(__file__).resolve().parent.parent
+    # Forces the path to be absolute
+    STATIC_DIR: Path = BASE_DIR / "static"
+    # Ensure the directory exists automatically
+    STATIC_DIR.mkdir(parents=True, exist_ok=True)
+
+    UPLOAD_DIR: Path = BASE_DIR / "uploads"
+    # Ensure the directory exists automatically
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)    
+    #UPLOAD_DIR: str = "uploads"
+    #STATIC_DIR: str = "static"
+
     MAX_FILE_SIZE: int = 100 * 1024 * 1024  # 100MB
     ALLOWED_IMAGE_TYPES: List[str] = [
         "image/jpeg", "image/png", "image/gif",

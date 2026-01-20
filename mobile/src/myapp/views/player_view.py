@@ -40,7 +40,7 @@ class PlayerView(toga.Box):
         # Top bar with back button
         top_bar = toga.Box(style=Pack(
             direction=ROW,
-            padding=20,
+            margin=20,
             background_color="#000000"
         ))
         
@@ -56,7 +56,7 @@ class PlayerView(toga.Box):
                 flex=1,
                 color="white",
                 font_size=18,
-                text_align=CENTER
+                text_align="center"
             )
         )
         
@@ -67,7 +67,7 @@ class PlayerView(toga.Box):
             flex=1,
             background_color="#000000",
             direction=COLUMN,
-            alignment=CENTER
+            alignment="center"
         ))
         
         # Play button in center
@@ -86,12 +86,12 @@ class PlayerView(toga.Box):
         # Progress bar section
         progress_section = toga.Box(style=Pack(
             direction=COLUMN,
-            padding=20,
+            margin=20,
             background_color="#000000"
         ))
         
         # Time labels
-        time_labels = toga.Box(style=Pack(direction=ROW, padding_bottom=10))
+        time_labels = toga.Box(style=Pack(direction=ROW, margin_bottom=10))
         self.current_time_label = toga.Label(
             "0:00",
             style=Pack(color="white", font_size=14)
@@ -122,7 +122,7 @@ class PlayerView(toga.Box):
         # Control buttons
         controls = toga.Box(style=Pack(
             direction=ROW,
-            padding=20,
+            margin=20,
             background_color="#1a1a1a",
             alignment=CENTER
         ))
@@ -131,7 +131,7 @@ class PlayerView(toga.Box):
         rewind_btn = toga.Button(
             "⏪ 10s",
             on_press=lambda w: self.seek(-10),
-            style=Pack(color="white", padding=10)
+            style=Pack(color="white", margin=10)
         )
         
         # Play/Pause
@@ -140,7 +140,7 @@ class PlayerView(toga.Box):
             on_press=self.toggle_play_pause,
             style=Pack(
                 color="white",
-                padding=15,
+                margin=15,
                 font_size=20,
                 margin_left=20,
                 margin_right=20
@@ -151,7 +151,7 @@ class PlayerView(toga.Box):
         forward_btn = toga.Button(
             "⏩ 10s",
             on_press=lambda w: self.seek(10),
-            style=Pack(color="white", padding=10)
+            style=Pack(color="white", margin=10)
         )
         
         controls.add(rewind_btn, self.play_pause_btn, forward_btn)
@@ -249,7 +249,7 @@ class PlayerView(toga.Box):
             self.progress_fill.style.width = progress_width
 
     async def go_back(self, widget):
-        from .home import HomeView
+        from .home_view import HomeView
         self.app.main_window.content = HomeView(self.app)
     
     async def _update_progress(self):

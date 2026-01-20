@@ -1,7 +1,7 @@
 [project]
 name = "app"
 version = "0.1.0"
-description = ""
+description = "Home Theater Live Application to manipulate photos, images, videos and films with integated AI functions"
 requires-python = ">=3.13,<4.0"
 dependencies = [
     "fastapi[standard]<1.0.0,>=0.114.2",
