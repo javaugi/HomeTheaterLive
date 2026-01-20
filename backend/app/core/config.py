@@ -1,6 +1,6 @@
 import secrets
 import warnings
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, List
 
 from pydantic import (
     AnyUrl,
@@ -33,6 +33,22 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     SECRET_KEY: str = secrets.token_urlsafe(32)
     ALGORITHM: str = "HS256"
+    # Security
+    # SECRET_KEY: str = "your-secret-key-here-change-in-production"
+    # ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
+    #file upload
+    UPLOAD_DIR: str = "uploads"
+    STATIC_DIR: str = "static"
+    MAX_FILE_SIZE: int = 100 * 1024 * 1024  # 100MB
+    ALLOWED_IMAGE_TYPES: List[str] = [
+        "image/jpeg", "image/png", "image/gif",
+        "image/bmp", "image/tiff", "image/webp"
+    ]
+    # Video Settings
+    DEFAULT_FPS: int = 30
+    DEFAULT_RESOLUTION: tuple = (1920, 1080)  # Full HD
+    OUTPUT_FORMAT: str = "mp4"
+
     # 60 minutes * 24 hours * 8 days = 8 days
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
     FRONTEND_HOST: str = "http://127.0.0.1:5173"
@@ -41,6 +57,17 @@ class Settings(BaseSettings):
     BACKEND_CORS_ORIGINS: Annotated[
         list[AnyUrl] | str, BeforeValidator(parse_cors)
     ] = []
+    # CORS Origins
+    #BACKEND_CORS_ORIGINS: List[str] = [
+    #    "http://localhost:8000",
+    #    "http://localhost:8080",
+    #    "http://localhost:8081",
+    #    "*"  # For mobile development
+    #]
+
+    # Celery (for async processing)
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -116,5 +143,8 @@ class Settings(BaseSettings):
 
         return self
 
+    #class Config:
+    #    case_sensitive = True
+    #    env_file = ".env"
 
 settings = Settings()  # type: ignore
