@@ -6,8 +6,19 @@ import toga
 from .storage import SecureStorage
 from .views.login import LoginView
 from .views.home_view import HomeView
+import asyncio
 
 class MyHomeTheater(toga.App):
+    def __init__(self, formal_name=None):
+        super().__init__(formal_name)
+
+        # API Configuration - update with your server IP
+        #self.api_base_url = "http://192.168.1.100:8000/api/v1"
+        self.headers = {"Content-Type": "application/json"}
+        # Views
+        self.home_view = None
+        self.login_view = None
+
     def startup(self):
         print("App starting up...")
         SecureStorage.app = self   # 🔥 REQUIRED
@@ -27,6 +38,8 @@ class MyHomeTheater(toga.App):
         if storage.access_token() and not storage.is_access_expired():
             print("User authenticated, loading HomeView")
             self.main_window.content = self.home_view
+            # Start background tasks if needed
+            asyncio.create_task(self.background_tasks())
         else:
             print("User not authenticated, loading LoginView")
             self.main_window.content = self.login_view

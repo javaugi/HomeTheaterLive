@@ -158,7 +158,7 @@ class PlayerView(toga.Box):
         
         # Add everything
         self.add(top_bar, video_area, progress_section, controls)
-        
+
     def _format_time(self, seconds):
         """Format seconds to HH:MM:SS or MM:SS"""
         if not seconds:

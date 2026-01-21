@@ -5,11 +5,14 @@ from toga.style.pack import COLUMN, ROW, CENTER
 from datetime import datetime
 import asyncio
 
+from .player_view import PlayerView
+from ..utils.icon_loader import load_icon
+
 class HomeView(toga.Box):
     def __init__(self, app):
         super().__init__(style=Pack(direction=COLUMN, flex=1))
         self.app = app
-        
+
         # Initialize services
         from ..api import APIClient
         from ..storage import SecureStorage
@@ -21,6 +24,9 @@ class HomeView(toga.Box):
         
         # Create UI components
         self._create_header()
+        # Recent video items
+        self.create_quick_actions()
+        self.create_recent_items()
         self._create_quick_actions()
         self._create_content_sections()
         self._create_bottom_nav()
@@ -39,14 +45,18 @@ class HomeView(toga.Box):
         # User info
         user_box = toga.Box(style=Pack(direction=COLUMN, flex=1))
         self.greeting_label = toga.Label(
-            "Good morning!",
+            "Welcome back!",
             style=Pack(color="white", font_size=16)
+        )
+        self.subtitle_label = toga.Label(
+            "What would you like to do today?",
+            style=Pack(font_size=16, color="#666")
         )
         self.username_label = toga.Label(
             "Guest",
             style=Pack(color="#8a8d93", font_size=14)
         )
-        user_box.add(self.greeting_label, self.username_label)
+        user_box.add(self.greeting_label, self.subtitle_label, self.username_label)
         
         # Icons (using text emojis for cross-platform)
         icons_box = toga.Box(style=Pack(direction=ROW))
@@ -81,17 +91,217 @@ class HomeView(toga.Box):
         icons_box.add(search_btn, notif_btn)
         header_box.add(user_box, search_btn, notif_btn)
         self.add(header_box)
-    
+
+    def create_quick_actions(self):
+        """Create quick action buttons"""
+        section_box = toga.Box(style=Pack(direction=COLUMN, padding=20))
+
+        title_label = toga.Label(
+            "Quick Actions",
+            style=Pack(font_size=20, font_weight="bold", padding_bottom=20)
+        )
+        section_box.add(title_label)
+
+        # Actions grid (2 columns)
+        actions_grid = toga.Box(style=Pack(direction=COLUMN))
+
+        # Row 1
+        row1 = toga.Box(style=Pack(direction=ROW, padding=10))
+
+        # Video Creator button
+        video_btn = toga.Button(
+            "Create Video",
+            on_press=self.process_video,
+            style=Pack(
+                flex=1,
+                padding=20,
+                margin=5,
+                background_color="#FF5722",
+                color="white",
+                font_size=16,
+                font_weight="bold"
+            )
+        )
+
+        # Upload button
+        upload_btn = toga.Button(
+            "Upload Media",
+            on_press=self.upload_media,
+            style=Pack(
+                flex=1,
+                padding=20,
+                margin=5,
+                background_color="#2196F3",
+                color="white",
+                font_size=16
+            )
+        )
+
+        row1.add(video_btn)
+        row1.add(upload_btn)
+
+        # Row 2
+        row2 = toga.Box(style=Pack(direction=ROW, padding=10))
+
+        # Gallery button
+        gallery_btn = toga.Button(
+            "My Gallery",
+            on_press=self.view_gallery,
+            style=Pack(
+                flex=1,
+                padding=20,
+                margin=5,
+                background_color="#4CAF50",
+                color="white",
+                font_size=16
+            )
+        )
+
+        # Settings button
+        settings_btn = toga.Button(
+            "Settings",
+            on_press=self.open_settings,
+            style=Pack(
+                flex=1,
+                padding=20,
+                margin=5,
+                background_color="#9C27B0",
+                color="white",
+                font_size=16
+            )
+        )
+
+        row2.add(gallery_btn)
+        row2.add(settings_btn)
+
+        actions_grid.add(row1)
+        actions_grid.add(row2)
+        section_box.add(actions_grid)
+
+        self.add(section_box)
+        self.add(toga.Divider(style=Pack(padding=10)))
+
+    def create_recent_items(self):
+        """Create recent items section"""
+        section_box = toga.Box(style=Pack(direction=COLUMN, padding=20))
+
+        title_label = toga.Label(
+            "Recent Videos",
+            style=Pack(font_size=20, font_weight="bold", padding_bottom=15)
+        )
+        section_box.add(title_label)
+
+        # Recent items list
+        recent_items = [
+            {"title": "Vacation Memories", "date": "2 days ago", "duration": "2:45"},
+            {"title": "Family Reunion", "date": "1 week ago", "duration": "5:20"},
+            {"title": "Project Presentation", "date": "2 weeks ago", "duration": "10:15"},
+        ]
+
+        for item in recent_items:
+            item_box = self.create_recent_item(item)
+            section_box.add(item_box)
+
+        self.add(section_box)
+
+    def create_recent_item(self, item):
+        """Create a recent item row"""
+        item_box = toga.Box(style=Pack(
+            direction=ROW,
+            padding=15,
+            margin_bottom=10,
+            background_color="#f5f5f5",
+            # border_radius=30
+        ))
+
+        # Video icon
+        video_icon = load_icon("video", size=40)
+        item_box.add(video_icon)
+
+        # Item details
+        details_box = toga.Box(style=Pack(direction=COLUMN, padding_left=15, flex=1))
+
+        title_label = toga.Label(
+            item["title"],
+            style=Pack(font_size=16, font_weight="bold")
+        )
+
+        meta_label = toga.Label(
+            f"{item['date']} • {item['duration']}",
+            style=Pack(font_size=14, color="#666")
+        )
+
+        details_box.add(title_label)
+        details_box.add(meta_label)
+        item_box.add(details_box)
+
+        # Play button
+        play_btn = toga.Button(
+            "▶",
+            on_press=lambda w, item=item: self.play_recent_item(item),
+            style=Pack(padding=10, font_size=20)
+        )
+        item_box.add(play_btn)
+
+        return item_box
+
+    async def process_video(self, widget):
+        """Handle video button press - navigate to video view"""
+        from .video_view import VideoView
+        # Create video view with navigate back callback
+        video_view = VideoView(
+            self.app,
+            navigate_back_callback=self.navigate_back_to_home
+        )
+        # Switch to video view
+        self.app.main_window.content = video_view.container
+
+    def navigate_back_to_home(self):
+        """Navigate back to home view"""
+        self.app.main_window.content = self
+
+    async def upload_media(self, widget):
+        """Handle upload media button press"""
+        self.app.main_window.info_dialog(
+            "Upload Media",
+            "Upload media functionality would open here"
+        )
+
+    async def view_gallery(self, widget):
+        """Handle gallery button press"""
+        self.app.main_window.info_dialog(
+            "My Gallery",
+            "Gallery view would open here"
+        )
+
+    async def open_settings(self, widget):
+        print("Opening Settings")
+        """Handle settings button press"""
+        #from .settings_view import SettingsView
+        #settings_view = SettingsView(self.app, self.navigate_back_to_home)
+        #self.app.main_window.content = settings_view
+        self.app.main_window.info_dialog(
+            "Open Setting",
+            "Setting view would open here"
+        )
+
+    async def play_recent_item(self, item):
+        """Play a recent video item"""
+        self.app.main_window.info_dialog(
+            "Playing Video",
+            f"Would play: {item['title']}\nDuration: {item['duration']}"
+        )
+
     def _create_quick_actions(self):
         """Create quick action buttons"""
         actions_box = toga.Box(style=Pack(
             direction=ROW,
             margin=(0, 25, 20, 25),
-            background_color="#1a1a2e"
+            background_color="#1a1a2e",
         ))
         
         actions = [
-            {"icon": "📁", "label": "Video", "action": self.process_video},
+            #{"icon": "📁", "label": "Video", "action": self.process_video},
             {"icon": "▶️", "label": "Play", "action": self.play_content},
             {"icon": "🎬", "label": "Movies", "action": self.show_movies},
             {"icon": "📺", "label": "TV Shows", "action": self.show_tv_shows},
@@ -357,17 +567,18 @@ class HomeView(toga.Box):
     # ====== EVENT HANDLERS ======
     
     async def process_video(self, widget):
-        """Handle video button press"""
-        from .video_view import Image2VideoApp
-        # You might want to pass actual media data here
-        media_item = {
-            'title': 'Demo Video',
-            'duration': 3600,  # 1 hour
-            'current_time': 0
-        }
-        self.app.main_window.content = Image2VideoApp(self.app)
+        """Handle video button press - navigate to video view"""
+        from .video_view import VideoView
+        # Create video view with navigate back callback
+        video_view = VideoView(
+            self.app,
+            navigate_back_callback=self.navigate_back_to_home
+        )
+        # Switch to video view
+        self.app.main_window.content = video_view.container
+        #self.app.main_window.content = PlayerView(self.app)
+        #async def navigate_back_to_home(self, widget):
 
-    
     async def play_content(self, widget):
         """Handle play button press"""
         from .player_view import PlayerView

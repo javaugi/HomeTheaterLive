@@ -2,9 +2,12 @@
 """2️⃣ API Interceptor (Auto-Attach Token + Retry) - (Interceptor Pattern)
 Handles API requests, auto-attaches tokens, refreshes on 401.
 """
+import requests
 import httpx
 import json
-from typing import Dict, Any
+from typing import Dict, Any, List, Optional
+import asyncio
+from pathlib import Path
 from .storage import SecureStorage
 
 #BASE_URL = "https://api.example.com/api/v1"
@@ -20,6 +23,8 @@ class APIClient:
         self.app = app  # Store app reference
         self.storage = SecureStorage(self.app)  # Pass app to storage
         self.access_token = self.storage.access_token()
+        self.session = requests.Session()
+        self.session.timeout = 30
         print(f"frontend/src/myapp/api.py APIClient init self.access_token= {self.access_token}")
         
     async def login(self, username: str, password: str) -> Dict[str, Any]:
@@ -186,7 +191,111 @@ class APIClient:
         except Exception as e:
             print(f"Error searching: {e}")
         return []
-    
+
+    async def upload_images(self, image_paths: List[str], settings: Dict) -> Dict:
+        """Upload images and create video"""
+        try:
+            # Prepare files for upload
+            files = []
+            for image_path in image_paths:
+                if Path(image_path).exists():
+                    files.append(
+                        ('files', (Path(image_path).name, open(image_path, 'rb'), 'image/jpeg'))
+                    )
+
+            # Prepare settings
+            data = {'settings': json.dumps(settings)}
+
+            # Make the request
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.session.post(
+                    f"{self.base_url}/process/upload",
+                    files=files,
+                    data=data
+                )
+            )
+
+            # Close all files
+            for _, (_, file_obj, _) in files:
+                file_obj.close()
+
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {'error': f"Server error: {response.status_code}", 'details': response.text}
+
+        except Exception as e:
+            return {'error': str(e)}
+
+    async def get_status(self, job_id: str) -> Dict:
+        """Get processing status for a job"""
+        try:
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.session.get(f"{self.base_url}/status/{job_id}")
+            )
+
+            if response.status_code == 200:
+                return response.json()
+            else:
+                return {'error': f"Server error: {response.status_code}"}
+
+        except Exception as e:
+            return {'error': str(e)}
+
+    async def list_videos(self) -> List[Dict]:
+        """Get list of available videos"""
+        try:
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.session.get(f"{self.base_url}/videos")
+            )
+
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('videos', [])
+            else:
+                return []
+
+        except Exception as e:
+            print(f"Error listing videos: {e}")
+            return []
+
+    async def download_video(self, filename: str, save_path: str) -> bool:
+        """Download a video file"""
+        try:
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.session.get(
+                    f"{self.base_url}/video/{filename}",
+                    stream=True
+                )
+            )
+
+            if response.status_code == 200:
+                with open(save_path, 'wb') as f:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        f.write(chunk)
+                return True
+            else:
+                return False
+
+        except Exception as e:
+            print(f"Error downloading video: {e}")
+            return False
+
+    async def test_connection(self) -> bool:
+        """Test connection to the API"""
+        try:
+            response = await asyncio.get_event_loop().run_in_executor(
+                None,
+                lambda: self.session.get(f"{self.base_url}/health", timeout=5)
+            )
+            return response.status_code == 200
+        except:
+            return False
+
 """
 ✅ Correct Way (FastAPI + Mobile)
 1. Why your current call fails
