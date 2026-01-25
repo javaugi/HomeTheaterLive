@@ -15,10 +15,10 @@ class LoginView(toga.Box):
         self.home_view = HomeView(self.app)
 
         # Create UI elements
-        self.label = toga.Label("Login to MyHomeTheater", style=Pack(font_size=20, padding_bottom=20))
-        self.user = toga.TextInput(placeholder="Username", style=Pack(padding_bottom=10, width=200))
-        self.pwd = toga.PasswordInput(placeholder="Password", style=Pack(padding_bottom=20, width=200))
-        self.btn = toga.Button("Login", on_press=self.login, style=Pack(padding_bottom=10))
+        self.label = toga.Label("Login to MyHomeTheater", style=Pack(font_size=20, margin_bottom=20))
+        self.user = toga.TextInput(placeholder="Username", style=Pack(margin_bottom=10, width=200))
+        self.pwd = toga.PasswordInput(placeholder="Password", style=Pack(margin_bottom=20, width=200))
+        self.btn = toga.Button("Login", on_press=self.login, style=Pack(margin_bottom=10))
         self.error_label = toga.Label("", style=Pack(color="red"))
         
         self.add(

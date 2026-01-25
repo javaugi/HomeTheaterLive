@@ -36,7 +36,6 @@ class H264VideoProcessor:
         quality: str = "high"
     ) -> Dict:
         """Create H.264 video from images asynchronously"""
-        print(f"H264VideoProcessor create_video_from_images image_paths={image_paths}")
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
             self.executor,
@@ -61,7 +60,6 @@ class H264VideoProcessor:
         quality: str = "high"
     ) -> Dict:
         """Synchronous H.264 video creation"""
-        print(f"H264VideoProcessor _create_video_sync image_paths={image_paths}")
         try:
             # Validate inputs
             if not image_paths:
@@ -74,8 +72,7 @@ class H264VideoProcessor:
             if not output_filename:
                 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
                 output_filename = f"video_{timestamp}.mp4"
-
-            print(f"H264VideoProcessor _create_video_sync output_filename={output_filename}")
+            
             # Set quality parameters
             quality_settings = self._get_quality_settings(quality)
             
@@ -90,7 +87,6 @@ class H264VideoProcessor:
                 quality_settings=quality_settings
             )
             
-            print(f"H264VideoProcessor _create_video_sync video_path={video_path}")
             # Method 2: If OpenCV fails, try using FFmpeg directly
             if not os.path.exists(video_path) or os.path.getsize(video_path) == 0:
                 logger.warning("OpenCV method failed, trying FFmpeg...")
@@ -112,8 +108,7 @@ class H264VideoProcessor:
             
             # Get video info
             video_info = self._get_video_info(video_path)
-            print(f"H264VideoProcessor _create_video_sync video_info={video_info}")
-
+            
             return {
                 "success": True,
                 "video_path": video_path,
@@ -155,8 +150,7 @@ class H264VideoProcessor:
     ) -> str:
         """Create video using OpenCV with H.264 codec"""
         video_path = os.path.join(self.output_dir, output_filename)
-        print(f"H264VideoProcessor _create_video_opencv video_path={video_path}")
-
+        
         # Read first image to get dimensions
         first_image = cv2.imread(image_paths[0])
         if first_image is None:
@@ -203,7 +197,6 @@ class H264VideoProcessor:
             except:
                 continue
         
-        print(f"H264VideoProcessor _create_video_opencv codec_used={codec_used}")
         if not video_writer or not video_writer.isOpened():
             raise ValueError("Could not create video writer with any codec")
         
@@ -267,8 +260,7 @@ class H264VideoProcessor:
     ) -> str:
         """Create video using FFmpeg directly (most reliable for H.264)"""
         video_path = os.path.join(self.output_dir, output_filename)
-        print(f"H264VideoProcessor _create_video_ffmpeg video_path={video_path}")
-
+        
         # Create a temporary directory for processed images
         temp_dir = tempfile.mkdtemp(prefix="video_frames_")
         
@@ -314,8 +306,7 @@ class H264VideoProcessor:
             ]
             
             logger.info(f"Running FFmpeg command: {' '.join(ffmpeg_cmd)}")
-            print(f"H264VideoProcessor _create_video_ffmpeg Running FFmpeg command: {' '.join(ffmpeg_cmd)}")
-
+            
             # Execute FFmpeg
             result = subprocess.run(
                 ffmpeg_cmd,
@@ -328,7 +319,6 @@ class H264VideoProcessor:
                 raise RuntimeError(f"FFmpeg failed: {result.stderr}")
             
             logger.info(f"Video created with FFmpeg: {video_path}")
-            print(f"H264VideoProcessor _create_video_ffmpeg Video created with FFmpeg: {video_path}")
             return video_path
             
         finally:
@@ -338,7 +328,6 @@ class H264VideoProcessor:
     
     def _convert_to_h264_ffmpeg(self, input_path: str, output_path: str, quality_settings: Dict):
         """Convert any video to H.264 using FFmpeg"""
-        print(f"H264VideoProcessor _convert_to_h264_ffmpeg input_path: {input_path}, output_path={output_path}")
         ffmpeg_cmd = [
             'ffmpeg',
             '-y',
@@ -365,7 +354,6 @@ class H264VideoProcessor:
     def _add_fade_transition(self, writer, img1, img2, fps, duration=0.5):
         """Add fade transition between two images"""
         transition_frames = int(duration * fps)
-        print(f"H264VideoProcessor _add_fade_transition transition_frames: {transition_frames}")
         for i in range(transition_frames):
             alpha = i / transition_frames
             beta = 1 - alpha
@@ -376,8 +364,7 @@ class H264VideoProcessor:
         """Add slide transition between two images"""
         transition_frames = int(duration * fps)
         height, width = img1.shape[:2]
-        print(f"H264VideoProcessor _add_slide_transition transition_frames: {transition_frames}")
-
+        
         for i in range(transition_frames):
             offset = int((i / transition_frames) * width)
             
@@ -396,7 +383,6 @@ class H264VideoProcessor:
     
     def _get_video_info(self, video_path: str) -> Dict:
         """Get information about the created video"""
-        print(f"H264VideoProcessor _get_video_info video_path: {video_path}")
         try:
             # Use FFprobe to get video info
             ffprobe_cmd = [
@@ -434,7 +420,6 @@ class H264VideoProcessor:
             
             # Fallback to OpenCV if FFprobe fails
             cap = cv2.VideoCapture(video_path)
-            print(f"H264VideoProcessor _get_video_info video_path: {video_path} \n cap={cap}")
             if cap.isOpened():
                 width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -443,7 +428,7 @@ class H264VideoProcessor:
                 duration = frame_count / fps if fps > 0 else 0
                 
                 cap.release()
-
+                
                 return {
                     "duration": duration,
                     "resolution": f"{width}x{height}",
@@ -459,7 +444,6 @@ class H264VideoProcessor:
     
     def _format_bytes(self, size: int) -> str:
         """Format bytes to human readable"""
-        print(f"H264VideoProcessor _format_bytes size: {size}")
         for unit in ['B', 'KB', 'MB', 'GB']:
             if size < 1024.0:
                 return f"{size:.1f} {unit}"

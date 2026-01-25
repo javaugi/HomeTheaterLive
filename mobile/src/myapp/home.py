@@ -26,7 +26,7 @@ class Home(toga.Box):
 
         self.logout_button = toga.Button(
             "Logout",
-            style=Pack(padding_top=20),
+            style=Pack(margin_top=20),
             on_press=self.logout
         )
 

@@ -106,7 +106,7 @@ def create_icon_button(icon_name, text, on_press, size=30):
     # Add label
     label = toga.Label(
         text,
-        style=Pack(text_align='center', padding_top=5)
+        style=Pack(text_align='center', margin_top=5)
     )
     box.add(label)
 

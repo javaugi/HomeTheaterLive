@@ -12,13 +12,13 @@ class ProgressModal:
         
         self.message_label = toga.Label(
             "Starting...",
-            style=Pack(padding_bottom=10, text_align='center')
+            style=Pack(margin_bottom=10, text_align='center')
         )
         
         self.progress_bar = toga.ProgressBar(
             max=100,
             value=0,
-            style=Pack(padding_bottom=10)
+            style=Pack(margin_bottom=10)
         )
         
         self.cancel_btn = toga.Button(

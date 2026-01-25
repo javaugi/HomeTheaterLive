@@ -98,7 +98,7 @@ class HomeView(toga.Box):
 
         title_label = toga.Label(
             "Quick Actions",
-            style=Pack(font_size=20, font_weight="bold", padding_bottom=20)
+            style=Pack(font_size=20, font_weight="bold", margin_bottom=20)
         )
         section_box.add(title_label)
 
@@ -187,7 +187,7 @@ class HomeView(toga.Box):
 
         title_label = toga.Label(
             "Recent Videos",
-            style=Pack(font_size=20, font_weight="bold", padding_bottom=15)
+            style=Pack(font_size=20, font_weight="bold", margin_bottom=15)
         )
         section_box.add(title_label)
 
@@ -219,7 +219,7 @@ class HomeView(toga.Box):
         item_box.add(video_icon)
 
         # Item details
-        details_box = toga.Box(style=Pack(direction=COLUMN, padding_left=15, flex=1))
+        details_box = toga.Box(style=Pack(direction=COLUMN, margin_left=15, flex=1))
 
         title_label = toga.Label(
             item["title"],
@@ -248,6 +248,7 @@ class HomeView(toga.Box):
     async def process_video(self, widget):
         """Handle video button press - navigate to video view"""
         from .video_view import VideoView
+        #from .video_view_bk import VideoView
         # Create video view with navigate back callback
         video_view = VideoView(
             self.app,
