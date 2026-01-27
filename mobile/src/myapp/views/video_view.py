@@ -15,7 +15,9 @@ import tempfile
 import subprocess
 import json
 import shutil
+import aiohttp
 
+BASE_URL = "http://127.0.0.1:8000/api/v1"
 
 logger = logging.getLogger(__name__)
 # Setup logging
@@ -25,14 +27,19 @@ logging.basicConfig(
     filename='app_debug.log'
 )
 
+USE_BACKEND_API_CALL: bool = True
+#USE_BACKEND_API_CALL: bool = False
+
 class VideoView:
     """Main video processing view"""
 
     def __init__(self, app, navigate_back_callback=None):
         self.app = app
+        self.app.api_base_url = BASE_URL
         self.navigate_back_callback = navigate_back_callback
-        from ..api import APIClient
-        self.api = APIClient(app=self.app)
+        #from ..api import APIClient
+        #self.api_client = APIClient(app=self.app)
+        self.api_client = None  # Will be initialized when needed        
 
         # Current state
         self.selected_images = []
@@ -48,6 +55,14 @@ class VideoView:
         except Exception as e:
             print(f"DEBUG ERROR: Failed to build UI: {e}")
             raise
+
+    async def get_api_client(self):
+        """Get or create API client"""
+        if self.api_client is None:
+            from ..api import APIClient
+            self.api_client = APIClient(self.app, self.app.api_base_url)
+        return self.api_client
+    
 
     def init_ui_elements(self):
         """Initialize all UI element references"""
@@ -75,7 +90,7 @@ class VideoView:
     def create_ui(self):
         """Create the video processing UI"""
         # Main container
-        self.container = toga.Box(style=Pack(direction=COLUMN, padding=0, flex=1))
+        self.container = toga.Box(style=Pack(direction=COLUMN, margin=0, flex=1))
 
         # Header with back button
         self.create_header()
@@ -92,7 +107,7 @@ class VideoView:
         """Create the header with back button and title"""
         header_box = toga.Box(style=Pack(
             direction=ROW,
-            padding=15,
+            margin=15,
             text_align="center",
             background_color="#f0f0f0"
         ))
@@ -118,7 +133,7 @@ class VideoView:
         header_box.add(title_label)
 
         self.container.add(header_box)
-        self.container.add(toga.Divider(style=Pack(padding=0)))
+        self.container.add(toga.Divider(style=Pack(margin=0)))
 
         return header_box
 
@@ -126,7 +141,7 @@ class VideoView:
         """Create the main content area"""
         # Scroll container for better mobile experience
         scroll_container = toga.ScrollContainer(style=Pack(flex=1))
-        content_box = toga.Box(style=Pack(direction=COLUMN, padding=20, flex=1))
+        content_box = toga.Box(style=Pack(direction=COLUMN, margin=20, flex=1))
 
         # File selection section
         self.create_file_selection(content_box)
@@ -144,7 +159,7 @@ class VideoView:
 
     def create_file_selection(self, parent):
         """Create file selection section"""
-        section_box = toga.Box(style=Pack(direction=COLUMN, padding=15))
+        section_box = toga.Box(style=Pack(direction=COLUMN, margin=15))
 
         # Section title
         title_box = toga.Box(style=Pack(direction=ROW, margin_bottom=10))
@@ -158,20 +173,20 @@ class VideoView:
         section_box.add(title_box)
 
         # Button row
-        button_row = toga.Box(style=Pack(direction=ROW, padding=10))
+        button_row = toga.Box(style=Pack(direction=ROW, margin=10))
 
         # Pick Images button
         self.pick_images_btn = toga.Button(
             "📷 Pick Images",
             on_press=self.pick_images,
-            style=Pack(flex=1, padding=12, background_color="#4CAF50")
+            style=Pack(flex=1, margin=12, background_color="#4CAF50")
         )
 
         # Pick Directory button
         self.pick_directory_btn = toga.Button(
             "📂 Pick Directory",
             on_press=self.pick_directory,
-            style=Pack(flex=1, padding=12, margin_left=10, background_color="#2196F3")
+            style=Pack(flex=1, margin=12, margin_left=10, background_color="#2196F3")
         )
 
         button_row.add(self.pick_images_btn)
@@ -183,7 +198,7 @@ class VideoView:
         self.clear_btn = toga.Button(
             "🗑️ Clear Selection",
             on_press=self.clear_selection,
-            style=Pack(padding=8, background_color="#f44336")
+            style=Pack(margin=8, background_color="#f44336")
         )
         clear_box.add(self.clear_btn)
         section_box.add(clear_box)
@@ -194,7 +209,7 @@ class VideoView:
             placeholder="No images selected\n\nClick 'Pick Images' or 'Pick Directory' to select images",
             style=Pack(
                 height=120,
-                padding=10,
+                margin=10,
                 margin_top=10,
                 background_color="#fafafa",
                 #border_color="#ddd",
@@ -204,13 +219,13 @@ class VideoView:
         section_box.add(self.file_list)
 
         parent.add(section_box)
-        parent.add(toga.Divider(style=Pack(padding=10)))
+        parent.add(toga.Divider(style=Pack(margin=10)))
 
         return section_box
 
     def create_settings_section(self, parent):
         """Create video settings section"""
-        section_box = toga.Box(style=Pack(direction=COLUMN, padding=15))
+        section_box = toga.Box(style=Pack(direction=COLUMN, margin=15))
 
         # Section title
         title_box = toga.Box(style=Pack(direction=ROW, margin_bottom=10))
@@ -224,7 +239,7 @@ class VideoView:
         section_box.add(title_box)
 
         # FPS Setting
-        fps_box = toga.Box(style=Pack(direction=ROW, padding=8, text_align="center"))
+        fps_box = toga.Box(style=Pack(direction=ROW, margin=8, text_align="center"))
         fps_label = toga.Label(
             "Frame Rate (FPS):",
             style=Pack(width=150, margin_right=10)
@@ -233,14 +248,14 @@ class VideoView:
             min=1,
             max=60,
             value=24,
-            style=Pack(flex=1, padding=8)
+            style=Pack(flex=1, margin=8)
         )
         fps_box.add(fps_label)
         fps_box.add(self.fps_input)
         section_box.add(fps_box)
 
         # Duration per image
-        duration_box = toga.Box(style=Pack(direction=ROW, padding=8, text_align="center"))
+        duration_box = toga.Box(style=Pack(direction=ROW, margin=8, text_align="center"))
         duration_label = toga.Label(
             "Seconds per image:",
             style=Pack(width=150, margin_right=10)
@@ -250,48 +265,49 @@ class VideoView:
             max=10,
             value=2.0,
             step=0.5,
-            style=Pack(flex=1, padding=8)
+            style=Pack(flex=1, margin=8)
         )
         duration_box.add(duration_label)
         duration_box.add(self.duration_input)
         section_box.add(duration_box)
 
         # Transition type
-        transition_box = toga.Box(style=Pack(direction=ROW, padding=8, text_align="center"))
+        transition_box = toga.Box(style=Pack(direction=ROW, margin=8, text_align="center"))
         transition_label = toga.Label(
             "Transition effect:",
             style=Pack(width=150, margin_right=10)
         )
         self.transition_select = toga.Selection(
             items=["None", "Fade", "Slide", "Zoom", "Crossfade"],
-            style=Pack(flex=1, padding=8)
+            style=Pack(flex=1, margin=8)
         )
         transition_box.add(transition_label)
         transition_box.add(self.transition_select)
         section_box.add(transition_box)
 
         # Video quality (simulated)
-        quality_box = toga.Box(style=Pack(direction=ROW, padding=8, text_align="center"))
+        quality_box = toga.Box(style=Pack(direction=ROW, margin=8, text_align="center"))
         quality_label = toga.Label(
             "Output Quality:",
             style=Pack(width=150, margin_right=10)
         )
         self.quality_select = toga.Selection(
             items=["Low (480p)", "Medium (720p)", "High (1080p)", "Ultra (4K)"],
-            style=Pack(flex=1, padding=8)
+            style=Pack(flex=1, margin=8)
         )
+        self.quality_select.value = "High (1080p)"
         quality_box.add(quality_label)
         quality_box.add(self.quality_select)
         section_box.add(quality_box)
 
         parent.add(section_box)
-        parent.add(toga.Divider(style=Pack(padding=10)))
+        parent.add(toga.Divider(style=Pack(margin=10)))
 
         return section_box
 
     def create_action_buttons(self, parent):
         """Create action buttons"""
-        section_box = toga.Box(style=Pack(direction=COLUMN, padding=15))
+        section_box = toga.Box(style=Pack(direction=COLUMN, margin=15))
 
         # Section title
         title_label = toga.Label(
@@ -301,14 +317,14 @@ class VideoView:
         section_box.add(title_label)
 
         # Primary action button
-        button_box = toga.Box(style=Pack(direction=ROW, padding=10, text_align="center"))
+        button_box = toga.Box(style=Pack(direction=ROW, margin=10, text_align="center"))
 
         self.create_video_btn = toga.Button(
             "🎬 CREATE VIDEO NOW",
             on_press=self.create_video,
             style=Pack(
                 flex=1,
-                padding=15,
+                margin=15,
                 font_size=16,
                 font_weight="bold",
                 background_color="#FF5722",
@@ -321,7 +337,7 @@ class VideoView:
 
         # Download section (initially hidden)
         self.download_section = toga.Box(
-            style=Pack(direction=COLUMN, padding=15, margin_top=20, display='none')
+            style=Pack(direction=COLUMN, margin=15, margin_top=20, display='none')
         )
 
         download_title = toga.Label(
@@ -330,13 +346,13 @@ class VideoView:
         )
         self.download_section.add(download_title)
 
-        download_btn_box = toga.Box(style=Pack(direction=ROW, padding=10, text_align="center"))
+        download_btn_box = toga.Box(style=Pack(direction=ROW, margin=10, text_align="center"))
         self.download_btn = toga.Button(
             "📥 DOWNLOAD VIDEO",
             on_press=self.download_video,
             style=Pack(
                 flex=1,
-                padding=12,
+                margin=12,
                 background_color="#4CAF50",
                 color="white"
             )
@@ -353,34 +369,34 @@ class VideoView:
         """Create status and progress area"""
         status_box = toga.Box(style=Pack(
             direction=COLUMN,
-            padding=20,
+            margin=20,
             background_color="#f5f5f5"
         ))
 
         # Status label
         self.status_label = toga.Label(
             "Ready to create amazing videos from your images",
-            style=Pack(padding=10, text_align=CENTER, font_size=14, color="#666")
+            style=Pack(margin=10, text_align=CENTER, font_size=14, color="#666")
         )
         status_box.add(self.status_label)
 
         # Progress bar container (initially hidden)
         self.progress_container = toga.Box(
-            style=Pack(direction=COLUMN, padding=10, display='none')
+            style=Pack(direction=COLUMN, margin=10, display='none')
         )
 
         # Progress bar
         self.progress_bar = toga.ProgressBar(
             max=100,
             value=0,
-            style=Pack(padding=5, height=20)
+            style=Pack(margin=5, height=20)
         )
         self.progress_container.add(self.progress_bar)
 
         # Progress percentage label
         self.progress_label = toga.Label(
             "0%",
-            style=Pack(padding=5, text_align="center", font_size=12)
+            style=Pack(margin=5, text_align="center", font_size=12)
         )
         self.progress_container.add(self.progress_label)
 
@@ -641,7 +657,7 @@ class VideoView:
         self.update_status("Selection cleared")
         self.hide_download_section()
 
-    async def create_video_bk(self, widget):
+    async def create_video_bk2(self, widget):
         """Create video from selected images"""
         print(f"Creating video from selected Selected {len(self.selected_images)} images")
         if not self.selected_images:
@@ -697,7 +713,274 @@ class VideoView:
             self.create_video_btn.enabled = True
             self.clear_btn.enabled = True
 
+
+    """
+    This call the backend through api
+    """
+    async def create_video_backend(self, widget):
+        """Create video using backend API"""
+        if self.is_processing:
+            self.show_error("Already processing a video")
+            return
+        
+        if not self.selected_images:
+            self.show_error("Please select images first")
+            return
+        
+        try:
+            self.is_processing = True
+            self.update_status("Starting video creation...")
+            
+            # Show progress container
+            print("Creating video show_progress_container ...")
+            self.show_progress_container()
+            print("Creating video update_progress ...")
+            self.update_progress(5)
+            
+            # Disable buttons during processing
+            self.set_buttons_enabled(False)
+            
+            # Get settings from UI
+            fps = int(self.fps_input.value) if self.fps_input else 24
+            duration_per_image = float(self.duration_input.value) if self.duration_input else 2.0
+            transition = self.transition_select.value.lower() if self.transition_select else "none"
+            quality = self.quality_select.value.lower() if self.quality_select else "high"
+            
+            print(f"DEBUG: create_video Creating video with {len(self.selected_images)} images")
+            print(f"DEBUG: create_video Settings - FPS: {fps}, Duration: {duration_per_image}, Transition: {transition}, quality: {quality}")
+            
+            
+            if not hasattr(self, 'api_client') or self.api_client is None:
+                self.api_client = await self.get_api_client()
+            # Test connection first
+            #if not await self.check_backend_connection():
+            if not await self.api_client.test_connection():
+                self.show_error("Cannot connect to video server")
+                self.is_processing = False
+                self.set_buttons_enabled(True)
+                return
+            
+            # Send to backend for processing
+            await self.process_with_backend(fps, duration_per_image, transition, quality)
+            
+        except Exception as e:
+            error_msg = f"Video creation failed: {str(e)}"
+            print(f"DEBUG ERROR: {error_msg}")
+            self.show_error(error_msg)
+            self.is_processing = False
+            self.set_buttons_enabled(True)
+            self.hide_progress_container()
+    
+    async def check_backend_connection(self):
+        """Check if backend is reachable"""
+        try:
+            print(f"DEBUG: video-view.py check_backend_connection calling {self.app.api_base_url}/health")
+            if not hasattr(self, 'api_client') or self.api_client is None:
+                self.api_client = await self.get_api_client()
+            # Try to connect to the backend
+            async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
+                async with session.get(f"{self.app.api_base_url}/health") as response:
+                    return response.status == 200
+        except:
+            return False
+    
+    async def process_with_backend(self, fps, duration_per_image, transition, quality):
+        """Process video using backend API"""
+        try:
+            print(f"DEBUG: video-view.py process_with_backend fps={fps}")
+            self.update_status("Uploading images to server...")
+            self.update_progress(10)
+            
+            # Initialize API client
+            if not hasattr(self, 'api_client') or self.api_client is None:
+                self.api_client = await self.get_api_client()
+            
+            # Upload images and start processing
+            result = await self.api_client.create_video(
+                image_paths=self.selected_images,
+                fps=fps,
+                duration_per_image=duration_per_image,
+                transition_type=transition,
+                quality=quality
+            )
+            print(f"DEBUG: video-view.py process_with_backend calling self.api_client.create_video result={result}")
+            
+            if not result.get('success', False):
+                raise ValueError(result.get('error', 'Unknown error from server'))
+            
+            job_id = result.get('job_id')
+            if not job_id:
+                raise ValueError("No job ID received from server")
+            
+            self.current_job_id = job_id
+            self.update_status("Processing on server...")
+            self.update_progress(20)
+            
+            # Poll for completion
+            #await self.poll_backend_progress(job_id)
+            print(f"DEBUG: video-view.py process_with_backend calling poll_video_progress job_id={job_id}")
+            await self.poll_video_progress(job_id, self.api_client)
+            
+        except Exception as e:
+            raise Exception(f"Backend processing failed: {str(e)}")
+    
+    async def poll_video_progress(self, job_id, api):
+        """Poll for video progress"""
+        print(f"DEBUG: video-view.py poll_video_progress job_id={job_id}")
+        def on_progress_callback(progress, message, status):
+            # This runs in the async context
+            self.update_progress(progress)
+            self.update_status(message)
+            return True  # Continue polling
+        
+        result = await api.poll_status_new(
+            job_id=job_id,
+            on_progress=on_progress_callback,
+            interval=2.0,
+            timeout=600.0,
+            max_attempts=300
+        )
+        
+        if result.get('success'):
+            self.update_status("Video created successfully!")
+            self.download_btn.enabled = True
+        else:
+            raise ValueError(result.get('error', 'Processing failed'))
+    
+    async def cleanup(self):
+        """Cleanup resources"""
+        if self.api_client:
+            await self.api_client.close()
+            
+    async def poll_backend_progress(self, job_id):
+        """Poll backend for processing progress"""
+        try:
+            print(f"DEBUG: video-view.py poll_backend_progress self.api_client.get_video_status(job_id) job_id={job_id}")
+            last_progress = 0
+            
+            while True:
+                # Get status from backend
+                status = await self.api_client.get_video_status(job_id)
+                
+                if not status.get('success', True):
+                    raise ValueError(status.get('error', 'Status check failed'))
+                
+                current_status = status.get('status')
+                progress = status.get('progress', 0)
+                message = status.get('message', 'Processing...')
+                
+                # Update UI
+                if progress > last_progress:
+                    self.update_progress(progress)
+                    self.update_status(message)
+                    last_progress = progress
+                
+                # Check if done
+                if current_status == 'completed':
+                    # Get video URL
+                    video_url = status.get('video_url')
+                    video_filename = os.path.basename(video_url) if video_url else None
+                    
+                    if video_filename:
+                        self.current_video_filename = video_filename
+                        self.current_job_id = job_id
+                    
+                    # Final update
+                    self.update_progress(100)
+                    self.update_status("Video created on server!")
+                    
+                    # Enable download button
+                    self.download_btn.enabled = True
+                    self.is_processing = False
+                    self.set_buttons_enabled(True)
+                    
+                    # Show success message
+                    if self.app and self.app.main_window:
+                        await self.show_info_dialog("Video created successly!", 
+                                    "Video has been created on the server.\nClick 'Download' to save it to your device.")
+                    break
+                    
+                elif current_status == 'failed':
+                    error_msg = status.get('message', 'Processing failed')
+                    raise ValueError(f"Server processing failed: {error_msg}")
+                
+                # Wait before polling again
+                await asyncio.sleep(2)  # Poll every 2 seconds
+                
+        except Exception as e:
+            raise Exception(f"Progress polling failed: {str(e)}")
+    
+    async def download_video_bk0(self, widget):
+        """Download video from backend"""
+        try:
+            print(f"DEBUG: video-view.py download_video self.current_job_id={self.current_job_id}")
+            if not self.current_job_id:
+                self.show_error("No video has been created yet")
+                return
+            
+            self.update_status("Preparing download...")
+            self.show_progress_container()
+            self.update_progress(10)
+            
+            # Get save location
+            save_path = await self.get_save_location()
+            
+            if not save_path:
+                self.update_status("Download cancelled")
+                self.hide_progress_container()
+                return
+            
+            self.update_progress(30)
+            self.update_status("Downloading video...")
+            
+            # Download from backend
+            if not hasattr(self, 'api_client') or self.api_client is None:
+                self.api_client = await self.get_api_client()
+            
+            # Get filename from job status
+            status = await self.api_client.get_video_status(self.current_job_id)
+            if status.get('status') != 'completed':
+                raise ValueError("Video is not ready for download")
+            
+            video_url = status.get('video_url')
+            if not video_url:
+                raise ValueError("No video URL available")
+            
+            video_filename = os.path.basename(video_url)
+            
+            # Download the file
+            success = await self.api_client.download_video(video_filename, save_path)
+            
+            if not success:
+                raise ValueError("Download failed")
+            
+            self.update_progress(100)
+            self.update_status("Download complete!")
+            
+            # Show success
+            await self.show_download_success(save_path)
+            
+            # Hide progress
+            self.hide_progress_container()
+            
+        except Exception as e:
+            error_msg = f"Download failed: {str(e)}"
+            print(f"DEBUG ERROR: {error_msg}")
+            self.show_error(error_msg)
+            self.hide_progress_container()
+        
+    """ 
+    The following is create video on the client side 
+    """
+    
     async def create_video(self, widget):
+        if USE_BACKEND_API_CALL:
+            await self.create_video_backend(widget)
+        else:
+            await self.create_video_frontend(widget)
+        
+    
+    async def create_video_frontend(self, widget):
         """Create actual H.264 video from selected images"""
         print(f"Creating video from selected images self.is_processing:{self.is_processing}")
         if self.is_processing:
@@ -924,7 +1207,7 @@ class VideoView:
                 self.current_video_filename = final_filename
                 
                 self.update_progress(100)
-                self.update_status(f"H.264 video created successfully! ({self.format_bytes(video_size)})")
+                self.update_status(f"H.264 video created successfully! ({self.format_bytes(video_size)}), self.current_video_filename={self.current_video_filename}, self.current_video_path={self.current_video_path}")
                 
                 print(f"DEBUG: Video created: {temp_video_path}")
                 print(f"DEBUG: Video size: {video_size} bytes")
@@ -1040,6 +1323,7 @@ class VideoView:
             # Create video using FFmpeg
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             video_path = os.path.join(tempfile.gettempdir(), f"video_{timestamp}.mp4")
+            print(f"_create_with_ffmpeg settings fps={fps}, timestamp={timestamp}, video_path={video_path}")
             
             # H.264 encoding settings
             preset = "medium"  # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
@@ -1340,7 +1624,7 @@ class VideoView:
                 self.update_progress(100)
                 self.update_status(f"Video created successfully! ({await self._format_bytes(video_size)})")
                 
-                print(f"DEBUG: Video ready for download: {video_path}")
+                print(f"DEBUG: Video ready for download: self.current_video_filename={self.current_video_filename}, self.current_video_path={self.current_video_path}")
                 
             except Exception as e:
                 print(f"Error: Creating Video : {e}")
@@ -2416,6 +2700,8 @@ class VideoView:
             )
         ✅ Option B: Use asyncio (non-UI apps)
         def main():
+            on_press=lambda w, item=item: asyncio.create_task(self.play_recent_item(item))
+            on_press=lambda w, item=item: self.run_async(self.play_recent_item(item)) - safest
             asyncio.run(load_data())
         ⚠ Not allowed inside BeeWare UI threads.
     ✅ RULE 4 ✅ Sync ➜ Sync        

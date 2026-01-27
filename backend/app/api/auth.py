@@ -11,11 +11,10 @@ from app.core.security import (
     create_access_token
     #, create_refresh_token,
 )
+from app.core.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-SECRET_KEY = "CHANGE_ME"
-ALGO = "HS256"
 
 def get_db():
     db = SessionLocal()
@@ -23,14 +22,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-#def create_access_token(sub: str, minutes: int):
-#    payload = {
-#        "sub": sub,
-#        "exp": datetime.now() + timedelta(minutes=minutes),
-#        "jti": str(uuid.uuid4())
-#    }
-#    return jwt.encode(payload, SECRET_KEY, algorithm=ALGO)
 
 """Option B — Temporary Dev Login (Quick Debug Only)
 If you just want to test UI quickly, modify:
@@ -42,11 +33,13 @@ def login(
     form: OAuth2PasswordRequestForm = Depends(),
     db: Session = Depends(get_db)
 ):
-    print("login user=", form.username, ", pwd=", form.password)
+    print("backend/app/api/auth.py login user=", form.username, ", pwd=", form.password)
     if form.username == "test" and form.password == "test":
+        access = create_access_token("test", 15)
+        refresh = create_access_token("test",43200)
         return {
-            "access_token": create_access_token("test", 15),
-            "refresh_token": create_access_token("test", 43200),
+            "access_token": access,
+            "refresh_token": refresh,
             "token_type": "bearer"
         }
 
@@ -69,7 +62,7 @@ def login(
 @router.post("/refresh")
 def refresh(refresh_token: str):
     try:
-        payload = jwt.decode(refresh_token, SECRET_KEY, algorithms=[ALGO])
+        payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=settings.ALGORITHM)
         return {"access_token": create_access_token(payload["sub"], 15)}
     except Exception:
         raise HTTPException(status_code=401, detail="Invalid refresh token")

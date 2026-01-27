@@ -1,7 +1,7 @@
 #backend/app/api/endpoints.py
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Depends, BackgroundTasks
-from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
-from typing import List, Optional
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi.responses import FileResponse
+from typing import List
 import os
 import uuid
 import shutil
@@ -10,8 +10,9 @@ import json
 
 from app.core.config import settings
 from app.core.video_processor import video_processor
+
 from app.model_s.schemas import (
-    VideoCreate, VideoResponse, ProcessingStatus,
+    VideoResponse, ProcessingStatus,
     DirectoryProcessRequest, VideoSettings
 )
 from app.utils.file_utils import (
@@ -19,7 +20,8 @@ from app.utils.file_utils import (
     create_temp_directory, cleanup_temp_directory
 )
 
-router = APIRouter()
+router = APIRouter(tags=["endpoints"])
+
 
 # In-memory storage for processing status (use Redis in production)
 processing_status = {}
@@ -259,3 +261,136 @@ async def process_upload_task(job_id: str, image_paths: List[str], settings: Vid
         processing_status[job_id]["error"] = str(e)
         # Cleanup on error too
         cleanup_temp_directory(temp_dir)
+        
+@router.post("/videos/create", response_model=VideoResponse)
+async def create_video(
+    files: List[UploadFile] = File(...),
+    fps: int = Form(30),
+    duration_per_image: float = Form(2.0),
+    transition_type: str = Form("none"),
+    resolution_width: int = Form(1920),
+    resolution_height: int = Form(1080),
+    quality: str = Form("high"),
+    background_tasks: BackgroundTasks = None
+):
+    """API endpoint to create video from uploaded images"""
+    print(f"backend/app/api/endpoints.py /videos/create fps={fps}, files={len(files)}")      
+    try:
+        # Create job ID
+        job_id = str(uuid.uuid4())
+        
+        # Create temp directory for uploaded files
+        temp_dir = os.path.join("temp_uploads", job_id)
+        os.makedirs(temp_dir, exist_ok=True)
+        
+        # Save uploaded files
+        saved_paths = []
+        for file in files:
+            file_path = os.path.join(temp_dir, file.filename)
+            with open(file_path, "wb") as buffer:
+                content = await file.read()
+                buffer.write(content)
+            saved_paths.append(file_path)
+        
+        # Store job info
+        processing_status[job_id] = {
+            "status": "processing",
+            "progress": 0,
+            "message": "Uploading images...",
+            "created_at": datetime.now().isoformat()
+        }
+        
+        # Process in background
+        background_tasks.add_task(
+            process_video_background,
+            job_id,
+            saved_paths,
+            fps,
+            duration_per_image,
+            transition_type,
+            (resolution_width, resolution_height),
+            quality,
+            temp_dir
+        )
+        
+        return VideoResponse(
+            job_id=job_id,
+            status="processing",
+            message="Video creation started",
+            video_url=None
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def process_video_background(
+    job_id: str,
+    image_paths: List[str],
+    fps: int,
+    duration_per_image: float,
+    transition_type: str,
+    resolution: tuple,
+    quality: str,
+    temp_dir: str
+):
+    """Background task to process video"""
+    print(f"backend/app/api/endpoints.py process_video_background job_id={job_id}, fps={fps}, image_paths={len(image_paths)}")      
+    try:
+        # Update status
+        processing_status[job_id]["progress"] = 10
+        processing_status[job_id]["message"] = "Processing images..."
+        
+        # Call the video processor
+        result = await video_processor.create_video_from_images(
+            image_paths=image_paths,
+            fps=fps,
+            resolution=resolution,
+            transition_type=transition_type,
+            duration_per_image=duration_per_image,
+            quality=quality
+        )
+        print(f"backend/app/api/endpoints.py process_video_background result={result}")      
+        
+        if result["success"]:
+            # Update status
+            processing_status[job_id]["status"] = "completed"
+            processing_status[job_id]["progress"] = 100
+            processing_status[job_id]["message"] = result["message"]
+            processing_status[job_id]["video_url"] = f"/api/v1/videos/{os.path.basename(result['video_path'])}"
+            processing_status[job_id]["video_path"] = result["video_path"]
+            processing_status[job_id]["completed_at"] = datetime.now().isoformat()
+        else:
+            processing_status[job_id]["status"] = "failed"
+            processing_status[job_id]["message"] = result.get("error", "Unknown error")
+            
+    except Exception as e:
+        processing_status[job_id]["status"] = "failed"
+        processing_status[job_id]["message"] = str(e)
+    finally:
+        # Cleanup temp directory
+        if os.path.exists(temp_dir):
+            shutil.rmtree(temp_dir)
+
+@router.get("/videos/{job_id}/status", response_model=ProcessingStatus)
+async def get_video_status(job_id: str):
+    """Get status of video processing job"""
+    print(f"backend/app/api/endpoints.py get_video_status job_id={job_id}, processing_status={processing_status}")      
+    if job_id not in processing_status:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    return ProcessingStatus(**processing_status[job_id])
+
+@router.get("/videos/download/{filename}")
+async def download_video(filename: str):
+    """Download video file"""
+    video_path = os.path.join(video_processor.output_dir, filename)
+    print(f"backend/app/api/endpoints.py download_video filename={filename}, video_path={video_path}")      
+    
+    if not os.path.exists(video_path):
+        raise HTTPException(status_code=404, detail="Video not found")
+    
+    return FileResponse(
+        video_path,
+        media_type="video/mp4",
+        filename=filename
+    )        

@@ -1,11 +1,10 @@
-#frontend/src/myapp/views/home_view.py
+#mobile/src/myapp/views/home_view.py
 import toga
 from toga.style import Pack
 from toga.style.pack import COLUMN, ROW, CENTER
 from datetime import datetime
 import asyncio
 
-from .player_view import PlayerView
 from ..utils.icon_loader import load_icon
 
 class HomeView(toga.Box):
@@ -20,7 +19,7 @@ class HomeView(toga.Box):
         self.storage = SecureStorage(self.app)
         
         self.access_token = self.storage.access_token()        
-        print(f"#frontend/src/myapp/home_view.py HomeView token: {self.access_token}")
+        print(f"#mobile/src/myapp/home_view.py HomeView token: {self.access_token}")
         
         # Create UI components
         self._create_header()
@@ -32,7 +31,10 @@ class HomeView(toga.Box):
         self._create_bottom_nav()
         
         # Load data
-        asyncio.create_task(self._load_initial_data())
+        if not self.access_token:
+            print("WARNING: #mobile/src/myapp/home_view.py __init__ NO self.access_token - skipping _load_initial_data call")
+        else:
+            asyncio.create_task(self._load_initial_data())
     
     def _create_header(self):
         """Create the header section with user info and search"""
@@ -94,7 +96,7 @@ class HomeView(toga.Box):
 
     def create_quick_actions(self):
         """Create quick action buttons"""
-        section_box = toga.Box(style=Pack(direction=COLUMN, padding=20))
+        section_box = toga.Box(style=Pack(direction=COLUMN, margin=20))
 
         title_label = toga.Label(
             "Quick Actions",
@@ -106,7 +108,7 @@ class HomeView(toga.Box):
         actions_grid = toga.Box(style=Pack(direction=COLUMN))
 
         # Row 1
-        row1 = toga.Box(style=Pack(direction=ROW, padding=10))
+        row1 = toga.Box(style=Pack(direction=ROW, margin=10))
 
         # Video Creator button
         video_btn = toga.Button(
@@ -114,8 +116,7 @@ class HomeView(toga.Box):
             on_press=self.process_video,
             style=Pack(
                 flex=1,
-                padding=20,
-                margin=5,
+                margin=20,
                 background_color="#FF5722",
                 color="white",
                 font_size=16,
@@ -129,8 +130,7 @@ class HomeView(toga.Box):
             on_press=self.upload_media,
             style=Pack(
                 flex=1,
-                padding=20,
-                margin=5,
+                margin=20,
                 background_color="#2196F3",
                 color="white",
                 font_size=16
@@ -141,7 +141,7 @@ class HomeView(toga.Box):
         row1.add(upload_btn)
 
         # Row 2
-        row2 = toga.Box(style=Pack(direction=ROW, padding=10))
+        row2 = toga.Box(style=Pack(direction=ROW, margin=10))
 
         # Gallery button
         gallery_btn = toga.Button(
@@ -149,8 +149,7 @@ class HomeView(toga.Box):
             on_press=self.view_gallery,
             style=Pack(
                 flex=1,
-                padding=20,
-                margin=5,
+                margin=20,
                 background_color="#4CAF50",
                 color="white",
                 font_size=16
@@ -163,8 +162,7 @@ class HomeView(toga.Box):
             on_press=self.open_settings,
             style=Pack(
                 flex=1,
-                padding=20,
-                margin=5,
+                margin=20,
                 background_color="#9C27B0",
                 color="white",
                 font_size=16
@@ -179,11 +177,11 @@ class HomeView(toga.Box):
         section_box.add(actions_grid)
 
         self.add(section_box)
-        self.add(toga.Divider(style=Pack(padding=10)))
+        self.add(toga.Divider(style=Pack(margin=10)))
 
     def create_recent_items(self):
         """Create recent items section"""
-        section_box = toga.Box(style=Pack(direction=COLUMN, padding=20))
+        section_box = toga.Box(style=Pack(direction=COLUMN, margin=20))
 
         title_label = toga.Label(
             "Recent Videos",
@@ -208,7 +206,7 @@ class HomeView(toga.Box):
         """Create a recent item row"""
         item_box = toga.Box(style=Pack(
             direction=ROW,
-            padding=15,
+            margin=15,
             margin_bottom=10,
             background_color="#f5f5f5",
             # border_radius=30
@@ -238,24 +236,13 @@ class HomeView(toga.Box):
         # Play button
         play_btn = toga.Button(
             "▶",
-            on_press=lambda w, item=item: self.play_recent_item(item),
-            style=Pack(padding=10, font_size=20)
+            on_press=lambda w, item=item: self.run_async(self.play_recent_item(item)),
+            style=Pack(margin=10, font_size=20)
         )
         item_box.add(play_btn)
 
         return item_box
 
-    async def process_video(self, widget):
-        """Handle video button press - navigate to video view"""
-        from .video_view import VideoView
-        #from .video_view_bk import VideoView
-        # Create video view with navigate back callback
-        video_view = VideoView(
-            self.app,
-            navigate_back_callback=self.navigate_back_to_home
-        )
-        # Switch to video view
-        self.app.main_window.content = video_view.container
 
     def navigate_back_to_home(self):
         """Navigate back to home view"""
@@ -263,17 +250,20 @@ class HomeView(toga.Box):
 
     async def upload_media(self, widget):
         """Handle upload media button press"""
-        self.app.main_window.info_dialog(
-            "Upload Media",
-            "Upload media functionality would open here"
-        )
+        if self.app and self.app.main_window:
+            await self.show_info_dialog(
+                "Upload Media",
+                "Upload media functionality would open here"
+            )        
 
     async def view_gallery(self, widget):
         """Handle gallery button press"""
-        self.app.main_window.info_dialog(
-            "My Gallery",
-            "Gallery view would open here"
-        )
+        if self.app and self.app.main_window:
+            await self.show_info_dialog(
+                "My Gallery",
+                "Gallery view would open here"
+            )
+        
 
     async def open_settings(self, widget):
         print("Opening Settings")
@@ -281,17 +271,19 @@ class HomeView(toga.Box):
         #from .settings_view import SettingsView
         #settings_view = SettingsView(self.app, self.navigate_back_to_home)
         #self.app.main_window.content = settings_view
-        self.app.main_window.info_dialog(
-            "Open Setting",
-            "Setting view would open here"
-        )
+        if self.app and self.app.main_window:
+            await self.show_info_dialog(
+                "Open Setting",
+                "Setting view would open here"
+            )
 
     async def play_recent_item(self, item):
         """Play a recent video item"""
-        self.app.main_window.info_dialog(
-            "Playing Video",
-            f"Would play: {item['title']}\nDuration: {item['duration']}"
-        )
+        if self.app and self.app.main_window:
+            await self.show_info_dialog(
+                "Playing Video",
+                f"Would play: {item['title']}\nDuration: {item['duration']}"
+            )
 
     def _create_quick_actions(self):
         """Create quick action buttons"""
@@ -338,14 +330,14 @@ class HomeView(toga.Box):
         )
         """Summary of Supported Pack Properties
         As of 2026, the Pack engine primarily supports layout and basic visual properties: 
-        Layout: width, height, flex, padding, margin, gap.
+        Layout: width, height, flex, margin, margin, gap.
         Visuals: background_color, color, visibility.
         Text: font_family, font_size, font_style, text_align. 
         """
         
         label_widget = toga.Label(
             label,
-            style=Pack(color="white", font_size=12, text_align=CENTER, margin_top=5)
+            style=Pack(color="white", font_size=12, text_align="center", margin_top=5)
         )
         
         btn_box.add(icon_btn, label_widget)
@@ -518,27 +510,27 @@ class HomeView(toga.Box):
     async def _load_initial_data(self):
         """Load initial data from API"""
         if not self.access_token:
-            print("WARNING: #frontend/src/myapp/home_view.py _load_initial_data NO self.access_token !")
+            print("WARNING: #mobile/src/myapp/home_view.py _load_initial_data NO self.access_token !")
             return
         
         try:
-            print(f"#frontend/src/myapp/home_view.py _load_initial_data HomeView token: {self.access_token}")
+            print(f"#mobile/src/myapp/home_view.py _load_initial_data HomeView token: {self.access_token}")
             # Load user profile
             user_data = await self.api.get_user_profile()
-            print(f"#frontend/src/myapp/home_view.py _load_initial_data get_user_profile: {user_data}")
+            print(f"#mobile/src/myapp/home_view.py _load_initial_data get_user_profile: {user_data}")
             if user_data:
                 self.username_label.text = user_data.get("username", "Guest")
                 self._update_greeting()
             
             # Load continue watching
             continue_data = await self.api.get_continue_watching()
-            print(f"#frontend/src/myapp/home_view.py _load_initial_data get_continue_watching: {continue_data}")
+            print(f"#mobile/src/myapp/home_view.py _load_initial_data get_continue_watching: {continue_data}")
             if continue_data:
                 self._populate_continue_watching(continue_data)
             
             # Load recommendations
             recommendations = await self.api.get_recommendations()
-            print(f"#frontend/src/myapp/home_view.py _load_initial_data get_recommendations: {recommendations}")
+            print(f"#mobile/src/myapp/home_view.py _load_initial_data get_recommendations: {recommendations}")
             if recommendations:
                 self._populate_recommendations(recommendations)
                 
@@ -664,4 +656,18 @@ class HomeView(toga.Box):
         self.app.main_window.content = LoginView(self.app)
 
 
+    async def show_error_dialog(self, message):
+        await self.app.main_window.dialog(
+            toga.ErrorDialog("Error!", message)
+        )            
+
+    async def show_warn_dialog(self, message):
+        await self.app.main_window.dialog(
+            toga.InfoDialog("Warning", message)
+        )
+            
+    async def show_info_dialog(self, title, message):
+        await self.app.main_window.dialog(
+            toga.InfoDialog(title, message)
+        )
 

@@ -1,4 +1,4 @@
-#frontend/src/myapp/app.py
+#mobile/src/myapp/app.py
 """
 My Home Theater Application to manipulate photos, images, videos and films with integated AI functions
 """
@@ -20,7 +20,7 @@ class MyHomeTheater(toga.App):
         self.login_view = None
 
     def startup(self):
-        print("App starting up...")
+        print("mobile/src/myapp/app.py App starting up...")
         SecureStorage.app = self   # 🔥 REQUIRED
         self._tokens = {}        
         self.home_view = HomeView(self)
@@ -36,7 +36,7 @@ class MyHomeTheater(toga.App):
         print(f"Checking for tokens... token exists: {bool(storage.access_token())} expired: {storage.is_access_expired()}")
 
         if storage.access_token() and not storage.is_access_expired():
-            print("User authenticated, loading HomeView")
+            print("mobile/src/myapp/app.py User authenticated, loading HomeView at mobile/src/myapp/views/home_view.py")
             self.main_window.content = self.home_view
             # Start background tasks if needed
             asyncio.create_task(self.background_tasks())
