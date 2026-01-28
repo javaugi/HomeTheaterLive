@@ -6,7 +6,7 @@ from myapp.api import APIClient
 
 class LoginView(toga.Box):
     def __init__(self, app):
-        super().__init__(style=Pack(direction=COLUMN, padding=20))
+        super().__init__(style=Pack(direction=COLUMN, margin=20))
         self.app = app
         # Create API client with app instance
         self.api_client = APIClient(app=self.app)     

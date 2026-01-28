@@ -1,28 +1,33 @@
-import cv2
+#backend/app/core/video_processor.py
+print(">>> importing backend/app/core/video_processor.py")
 import numpy as np
 import os
 from typing import List, Optional, Tuple, Dict
-from PIL import Image
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
 import tempfile
 import shutil
 from datetime import datetime
-import logging
 import subprocess
 import json
 
+import logging
 logger = logging.getLogger(__name__)
+print(">>> importing backend/app/core/video_processor.py done")
+
 
 class VideoProcessor:
     def __init__(self, output_dir: str = "processed_videos"):
+        print(">>> initializing VideoProcessor")
         self.output_dir = output_dir
-        os.makedirs(output_dir, exist_ok=True)
+        # ⚠️ DO NOT run ffmpeg, scan dirs, or heavy work here
+        # just cheap setup
+                
+        from concurrent.futures import ThreadPoolExecutor
         self.executor = ThreadPoolExecutor(max_workers=4)
         
         # H.264 codec settings
-        self.h264_preset = "medium"  # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
-        self.h264_crf = 23  # Constant Rate Factor (0-51, lower is better quality)
+        #self.h264_preset = "medium"  # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
+        #self.h264_crf = 23  # Constant Rate Factor (0-51, lower is better quality)
         
     async def create_video_from_images(
         self,
@@ -35,8 +40,8 @@ class VideoProcessor:
         quality: str = "high"
     ) -> Dict:
         """Create H.264 video from images asynchronously"""
-        print(f"VideoProcessor create_video_from_images image_paths={image_paths}")
-        loop = asyncio.get_event_loop()
+        print(f"VideoProcessor create_video_from_images image_paths={len(image_paths)}")
+        loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             self.executor,
             self._create_video_sync,
@@ -61,7 +66,7 @@ class VideoProcessor:
         quality: str = "high"
     ) -> Dict:
         """Synchronous H.264 video creation"""
-        print(f"VideoProcessor _create_video_sync image_paths={image_paths}")
+        print(f"VideoProcessor _create_video_sync image_paths={len(image_paths)}")
         try:
             # Validate inputs
             if not image_paths:
@@ -86,7 +91,7 @@ class VideoProcessor:
                 has_ffmpeg = True
             except:
                 has_ffmpeg = False
-                self.update_status("FFmpeg not found, using OpenCV...")
+                print(f"VideoProcessor FFmpeg not found, using OpenCV from image_paths={len(image_paths)}")
             
             if has_ffmpeg:
                 video_path = self._create_video_ffmpeg(
@@ -120,7 +125,7 @@ class VideoProcessor:
             
             # Get video info
             video_info = self._get_video_info(video_path)
-            print(f"VideoProcessor _create_video_sync video_info={video_info}")
+            print(f"VideoProcessor _create_video_sync video_info={video_info}, \n\n now return success with output_filename={output_filename}")
 
             return {
                 "success": True,
@@ -162,10 +167,17 @@ class VideoProcessor:
         quality_settings: Dict
     ) -> str:
         """Create video using OpenCV with H.264 codec"""
-        video_path = os.path.join(self.output_dir, output_filename)
+        # video files go to the HomeTheaterLive/video_output/*.mp4
+        import os        
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        OUTPUT_DIR = os.path.join(BASE_DIR, "..", "video_output")
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        #os.makedirs(self.output_dir, exist_ok=True)              
+        video_path = os.path.join(OUTPUT_DIR, output_filename)
         print(f"VideoProcessor _create_video_opencv video_path={video_path}")
 
         # Read first image to get dimensions
+        import cv2
         first_image = cv2.imread(image_paths[0])
         if first_image is None:
             raise ValueError(f"Could not read first image: {image_paths[0]}")
@@ -276,13 +288,20 @@ class VideoProcessor:
         quality_settings: Dict
     ) -> str:
         """Create video using FFmpeg directly (most reliable for H.264)"""
-        video_path = os.path.join(self.output_dir, output_filename)
+        import os        
+        BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
+        OUTPUT_DIR = os.path.join(BASE_DIR, "..", "video_output")
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        #os.makedirs(self.output_dir, exist_ok=True)                      
+        video_path = os.path.join(OUTPUT_DIR, output_filename)
+        #video_path = os.path.join(self.output_dir, output_filename)
         print(f"VideoProcessor _create_video_ffmpeg video_path={video_path}")
 
         # Create a temporary directory for processed images
         temp_dir = tempfile.mkdtemp(prefix="video_frames_")
         
         try:
+            from PIL import Image
             # Read first image to get dimensions
             first_image = Image.open(image_paths[0])            
             # Set resolution
@@ -315,6 +334,7 @@ class VideoProcessor:
             #"""
             frames_per_image = max(1, int(fps * duration_per_image))
             global_frame_idx = 0
+            import cv2
             for i, img_path in enumerate(image_paths):
                 img = cv2.imread(img_path)
                 if img is not None:
@@ -332,8 +352,7 @@ class VideoProcessor:
                         cv2.imwrite(temp_path, img)
                         global_frame_idx += 1
                 
-                progress = 10 + (i / len(self.selected_images)) * 50
-                self.update_progress(int(progress))
+                progress = 10 + (i / len(image_paths)) * 50
                 print(f"DEBUG: update_progress value: {int(progress)}")
                         
             frame_count = global_frame_idx
@@ -372,7 +391,7 @@ class VideoProcessor:
                 raise RuntimeError(f"FFmpeg failed: {result.stderr}")
             
             logger.info(f"Video created with FFmpeg: {video_path}")
-            print(f"VideoProcessor _create_video_ffmpeg Video created with FFmpeg: {video_path}")
+            print(f"VideoProcessor _create_video_ffmpeg Video created with FFmpeg: {video_path}, \n\n finally return for success")
             return video_path
             
         finally:
@@ -409,6 +428,7 @@ class VideoProcessor:
     def _add_fade_transition(self, writer, img1, img2, fps, duration=0.5):
         """Add fade transition between two images"""
         transition_frames = int(duration * fps)
+        import cv2
         print(f"VideoProcessor _add_fade_transition transition_frames: {transition_frames}")
         for i in range(transition_frames):
             alpha = i / transition_frames
@@ -477,6 +497,7 @@ class VideoProcessor:
                     }
             
             # Fallback to OpenCV if FFprobe fails
+            import cv2
             cap = cv2.VideoCapture(video_path)
             print(f"VideoProcessor _get_video_info video_path: {video_path} \n cap={cap}")
             if cap.isOpened():
@@ -511,5 +532,10 @@ class VideoProcessor:
         return f"{size:.1f} TB"
 
 # Global processor instance
-video_processor = VideoProcessor()# -*- coding: utf-8 -*-
-
+#video_processor = VideoProcessor()# -*- coding: utf-8 -*-
+_video_processor: VideoProcessor | None = None
+def get_video_processor() -> VideoProcessor:
+    global _video_processor
+    if _video_processor is None:
+        _video_processor = VideoProcessor()
+    return _video_processor

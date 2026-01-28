@@ -2,6 +2,7 @@
 """2️⃣ API Interceptor (Auto-Attach Token + Retry) - (Interceptor Pattern)
 Handles API requests, auto-attaches tokens, refreshes on 401.
 """
+print(">>> importing mobile/src/myapp/api.py")
 import httpx
 import json
 from typing import Dict, Any, List, Optional
@@ -11,6 +12,7 @@ from .storage import SecureStorage
 
 import aiohttp
 import os
+print(">>> importing mobile/src/myapp/api.py done")
 
 
 #BASE_URL = "https://api.example.com/api/v1"
@@ -373,7 +375,7 @@ class APIClient:
                         )
                     print(f"DEBUG: Added image: {Path(img_path).name}")
             """
-            
+            import io
             for img_path in image_paths:
                 if isinstance(img_path, str) and Path(img_path).exists():
                     with open(img_path, 'rb') as f:
@@ -385,6 +387,7 @@ class APIClient:
                     form_data.add_field(
                         'files',
                         img_data,
+                        io.BytesIO(img_data),
                         filename=Path(img_path).name,
                         content_type=content_type
                     )

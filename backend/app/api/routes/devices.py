@@ -1,3 +1,4 @@
+print(">>> importing backend/app/api/routes/devices.py")
 from typing import Any
 from fastapi import APIRouter
 
@@ -11,6 +12,7 @@ from app.models import (
 
 
 router = APIRouter(prefix="/devices", tags=["devices"])
+print(">>> importing backend/app/api/routes/devices.py done")
 
 @router.get("/", response_model=list[Item])
 def get_devices(

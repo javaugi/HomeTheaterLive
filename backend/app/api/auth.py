@@ -1,6 +1,6 @@
 # backend/app/api/auth.py
+print(">>> importing backend/app/api/auth.py")
 import jwt
-#, uuid
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
@@ -9,11 +9,11 @@ from app.model.user import User
 from app.core.security import (
     verify_password,
     create_access_token
-    #, create_refresh_token,
 )
 from app.core.config import settings
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+print(">>> importing backend/app/api/auth.py done")
 
 
 def get_db():

@@ -1,0 +1,4 @@
+#!/bin/sh
+# see app/model/video_job.py
+alembic revision --autogenerate -m "add video_jobs"
+alembic upgrade head

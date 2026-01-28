@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['mobile\\src\\myapp\\api.py', 'backend\\app\\main.py', 'backend\\app\\api\\endpoints.py', 'backend\\app\\api\\main.py', 'backend\\app\\api\\__init__.py']
+recent_files = ['backend\\app\\main.py', 'backend\\app\\api\\main.py', 'backend\\app\\__init__.py', 'backend\\app\\api\\__init__.py', 'backend\\app\\api\\endpoints.py', 'backend\\app\\core\\video_processor.py', 'backend\\app\\db\\session.py']
 
 [main]
 version = 0.2.0

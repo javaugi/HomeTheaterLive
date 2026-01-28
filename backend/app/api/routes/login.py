@@ -1,3 +1,4 @@
+print(">>> importing backend/app/api/routes/login.py")
 from datetime import timedelta
 from typing import Annotated, Any
 
@@ -19,6 +20,7 @@ from app.utils import (
 )
 
 router = APIRouter(tags=["login"])
+print(">>> importing backend/app/api/routes/login.py")
 
 
 @router.post("/login/access-token")

@@ -805,12 +805,13 @@ class VideoView:
             )
             print(f"DEBUG: video-view.py process_with_backend calling self.api_client.create_video result={result}")
             
-            if not result.get('success', False):
-                raise ValueError(result.get('error', 'Unknown error from server'))
+            #if not result.get('success', False):
+            #    raise ValueError(result.get('error', 'Unknown error from server'))
             
             job_id = result.get('job_id')
             if not job_id:
-                raise ValueError("No job ID received from server")
+                #raise ValueError("No job ID received from server")
+                raise ValueError(result.get("message", "Failed to start video job on server"))                
             
             self.current_job_id = job_id
             self.update_status("Processing on server...")

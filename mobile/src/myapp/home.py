@@ -1,16 +1,18 @@
 #frontend/src/myapp/home.py
+print(">>> importing mobile/src/myapp/home.py")
 import toga
 from toga.style import Pack
 from toga.style.pack import COLUMN
 from .api import APIClient
 from .storage import SecureStorage
 from .views.login import LoginView
+print(">>> importing mobile/src/myapp/home.py done")
 
 
 class Home(toga.Box):
 
     def __init__(self, app):
-        super().__init__(style=Pack(direction=COLUMN, padding=20, spacing=10))
+        super().__init__(style=Pack(direction=COLUMN, margin=20, spacing=10))
         self.app = app
         self.api = APIClient()
         self.storage = SecureStorage()

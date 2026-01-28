@@ -28,27 +28,27 @@ class VideoPlayer:
         """Create video player window"""
         self.video_window = toga.Window(title="Video Player")
         
-        content = toga.Box(style=Pack(direction='column', padding=10))
+        content = toga.Box(style=Pack(direction='column', margin=10))
         
         # Video placeholder (would be replaced with actual video player)
         self.video_label = toga.Label(
             "Video would play here",
-            style=Pack(padding=20, text_align='center')
+            style=Pack(margin=20, text_align='center')
         )
         
         # Control buttons
-        button_box = toga.Box(style=Pack(direction='row', padding=10))
+        button_box = toga.Box(style=Pack(direction='row', margin=10))
         
         close_btn = toga.Button(
             "Close",
             on_press=self.close,
-            style=Pack(flex=1, padding=5)
+            style=Pack(flex=1, margin=5)
         )
         
         save_btn = toga.Button(
             "Save to Device",
             on_press=self.save_to_device,
-            style=Pack(flex=1, padding=5)
+            style=Pack(flex=1, margin=5)
         )
         
         button_box.add(close_btn)

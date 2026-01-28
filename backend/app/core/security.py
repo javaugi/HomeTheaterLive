@@ -1,11 +1,11 @@
+print(">>> importing backend/app/core/security.py")
 from datetime import datetime, timedelta
-#, timezone
 from typing import Any
-
 import jwt, uuid
 from passlib.context import CryptContext
 import bcrypt
 from app.core.config import settings
+print(">>> importing backend/app/core/security.py done")
 
 #pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Or keep using pwd_context but with bcryptpbkdf
@@ -43,6 +43,7 @@ def create_access_token(subject: str | Any, minutes: int):
         "exp": expire,
         "jti": str(uuid.uuid4())
     }
+    print(f">>> backend/app/core/security.py create_access_token subjest={subject}")
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 # def verify_password(plain_password: str, hashed_password: str) -> bool:

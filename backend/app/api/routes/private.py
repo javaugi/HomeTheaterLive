@@ -1,10 +1,9 @@
+print(">>> importing backend/app/api/routes/private.py")
 from typing import Any
-
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 from app.api.deps import SessionDep
-from app.core.security import get_password_hash
 
 from app.model.user import User
 from app.models import (
@@ -12,6 +11,7 @@ from app.models import (
 )
 
 router = APIRouter(tags=["private"], prefix="/private")
+print(">>> importing backend/app/api/routes/private.py done")
 
 
 class PrivateUserCreate(BaseModel):
@@ -27,6 +27,7 @@ def create_user(user_in: PrivateUserCreate, session: SessionDep) -> Any:
     Create a new user.
     """
 
+    from app.core.security import get_password_hash
     user = User(
         email=user_in.email,
         full_name=user_in.full_name,

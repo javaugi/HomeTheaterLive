@@ -1,3 +1,4 @@
+print(">>> importing backend/app/api/routes/utils.py")
 from fastapi import APIRouter, Depends
 from pydantic.networks import EmailStr
 
@@ -6,6 +7,7 @@ from app.models import Message
 from app.utils import generate_test_email, send_email
 
 router = APIRouter(prefix="/utils", tags=["utils"])
+print(">>> importing backend/app/api/routes/utils.py done")
 
 
 @router.post(

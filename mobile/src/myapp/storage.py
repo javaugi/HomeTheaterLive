@@ -1,7 +1,9 @@
 #mobile/src/myapp/storage.py
+print(">>> importing mobile/src/myapp/storage.py")
 import toga
 import time
 import jwt
+print(">>> importing mobile/src/myapp/storage.py done")
 
 class SecureStorage:
     def __init__(self, app=None):

@@ -1,4 +1,5 @@
 #backend/app/main.py
+print(">>> importing backend/app/main.py")
 import sentry_sdk
 from fastapi import FastAPI, APIRouter, Request
 
@@ -8,6 +9,7 @@ from app.core.config import settings
 from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 import os
+print(">>> importing backend/app/main.py done")
 
 
 @asynccontextmanager
@@ -16,8 +18,10 @@ async def lifespan(app: FastAPI):
     print("Starting backend/app/main.py HomeTheaterLive Backend...")
     print(f"DEBUG: Current Working Directory: {os.getcwd()}")
     print(f"DEBUG: Looking for STATIC_DIR  directory at: {os.path.abspath(settings.STATIC_DIR)}")    
-    print(f"DEBUG: Looking for UPLOAD_DIRs directory at: {os.path.abspath(settings.UPLOAD_DIR)}")    
+    print(f"DEBUG: Looking for UPLOAD_DIRs directory at: {os.path.abspath(settings.UPLOAD_DIR)}")   
+    print(f"DEBUG: Looking for env_file location: {os.path.abspath(settings.ENV_FILE_LOC)}")
     #print(f"DEBUG: Looking for all settings: {settings.model_dump()}")   
+    
     # Create database tables during startup (not at import time)
     from app.db.session import engine
     from app.db.base import Base
@@ -45,15 +49,17 @@ app = FastAPI(
     lifespan=lifespan    
 )
 
-from app.api import main, auth
-#, endpoints
+print(">>> backend/app/main.py adding routers")
 from app.api.routes import watch, recommendations
-
-app.include_router(auth.router, prefix=settings.API_V1_STR)
-app.include_router(main.router, prefix=settings.API_V1_STR)
-#app.include_router(endpoints.router, prefix=settings.API_V1_STR)
+from app.api.auth import router as auth_router
+from app.api.main import router as main_router
+from app.api.endpoints import router as endpoints_router
+app.include_router(auth_router, prefix=settings.API_V1_STR)
+app.include_router(main_router, prefix=settings.API_V1_STR)
+app.include_router(endpoints_router, prefix=settings.API_V1_STR)
 app.include_router(watch.router, prefix=settings.API_V1_STR)
 app.include_router(recommendations.router, prefix=settings.API_V1_STR)
+print(">>> backend/app/main.py adding routers done")
 
 # Set all CORS enabled origins
 if settings.all_cors_origins:

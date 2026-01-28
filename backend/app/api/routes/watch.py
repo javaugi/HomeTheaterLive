@@ -1,4 +1,5 @@
 # backend/app/api/routes/watch.py
+print(">>> importing backend/app/api/routes/watch.py")
 from typing import Any
 from fastapi import APIRouter
 
@@ -10,9 +11,9 @@ from app.models import (
     Item,
 )
 
-
 # In watch.py
 router = APIRouter(prefix="/watch", tags=["watch"])
+print(">>> importing backend/app/api/routes/watch.py done")
 
 @router.get("/continue", response_model=list[Item])  # Assuming you have an Item model
 def get_continue_watching(current_user: CurrentUser, session: SessionDep) -> Any:

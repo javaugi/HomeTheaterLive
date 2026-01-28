@@ -1,4 +1,5 @@
 # backend/app/api/routes/recommendations.py
+print(">>> importing backend/app/api/routes/recommendations.py")
 from typing import Any
 from fastapi import APIRouter
 
@@ -12,6 +13,7 @@ from app.models import (
 
 
 router = APIRouter(prefix="/recommendations", tags=["recommendations"])
+print(">>> importing backend/app/api/routes/recommendations.py done")
 
 @router.get("/", response_model=list[Item])
 def get_recommendations(

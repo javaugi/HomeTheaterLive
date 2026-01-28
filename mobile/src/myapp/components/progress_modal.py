@@ -8,7 +8,7 @@ class ProgressModal:
         
         self.dialog = toga.Window(title=title, size=(300, 150))
         
-        content = toga.Box(style=Pack(direction='column', padding=20))
+        content = toga.Box(style=Pack(direction='column', margin=20))
         
         self.message_label = toga.Label(
             "Starting...",

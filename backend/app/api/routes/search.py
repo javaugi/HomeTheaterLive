@@ -1,3 +1,4 @@
+print(">>> importing backend/app/api/routes/search.py")
 from typing import Any
 from fastapi import APIRouter
 
@@ -9,8 +10,8 @@ from app.models import (
     Item,
 )
 
-
 router = APIRouter(prefix="/search", tags=["search"])
+print(">>> importing backend/app/api/routes/search.py done")
 
 @router.get("/", response_model=list[Item])
 def get_search(

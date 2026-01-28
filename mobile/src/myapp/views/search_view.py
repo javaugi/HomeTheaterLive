@@ -17,7 +17,7 @@ class SearchView(toga.Box):
     
     def _create_search_ui(self):
         # Search header
-        header = toga.Box(style=Pack(direction=ROW, padding=20, background_color="#1a1a2e"))
+        header = toga.Box(style=Pack(direction=ROW, margin=20, background_color="#1a1a2e"))
         
         back_btn = toga.Button(
             "←",

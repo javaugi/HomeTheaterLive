@@ -2,11 +2,13 @@
 """
 My Home Theater Application to manipulate photos, images, videos and films with integated AI functions
 """
+print(">>> importing mobile/src/myapp/app.py")
 import toga
 from .storage import SecureStorage
 from .views.login import LoginView
 from .views.home_view import HomeView
 import asyncio
+print(">>> importing mobile/src/myapp/app.py done")
 
 class MyHomeTheater(toga.App):
     def __init__(self, formal_name=None):

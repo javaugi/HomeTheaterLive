@@ -1,3 +1,4 @@
+print(">>> importing backend/app/api/routes/items.py")
 import uuid
 from typing import Any
 
@@ -8,6 +9,7 @@ from app.api.deps import CurrentUser, SessionDep
 from app.models import Item, ItemCreate, ItemPublic, ItemsPublic, ItemUpdate, Message
 
 router = APIRouter(prefix="/items", tags=["items"])
+print(">>> importing backend/app/api/routes/items.py done")
 
 
 @router.get("/", response_model=ItemsPublic)

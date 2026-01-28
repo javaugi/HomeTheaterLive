@@ -1,3 +1,4 @@
+print(">>> importing backend/app/api/routes/users.py")
 import uuid
 from typing import Any
 
@@ -28,6 +29,7 @@ from app.models import (
 from app.utils import generate_new_account_email, send_email
 
 router = APIRouter(prefix="/users", tags=["users"])
+print(">>> importing backend/app/api/routes/users.py done")
 
 
 @router.get(

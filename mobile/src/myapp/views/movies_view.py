@@ -13,7 +13,7 @@ class MoviesView(toga.Box):
         self._create_movies_grid()
     
     def _create_header(self):
-        header = toga.Box(style=Pack(direction=ROW, padding=20, background_color="#1a1a2e"))
+        header = toga.Box(style=Pack(direction=ROW, margin=20, background_color="#1a1a2e"))
         
         back_btn = toga.Button(
             "← Back",
