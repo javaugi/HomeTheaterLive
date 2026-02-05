@@ -13,13 +13,8 @@ async def root():
 async def health_check():
     return {"status": "healthy", "timestamp": "2024-01-19T00:00:00Z"}
 
-#from app.core.config import settings
-#from app.api import auth, endpoints
-#from app.api.routes import watch, recommendations
-#router.include_router(auth.router, prefix=settings.API_V1_STR)
-#router.include_router(endpoints.router, prefix=settings.API_V1_STR)
-#router.include_router(watch.router, prefix=settings.API_V1_STR)
-#router.include_router(recommendations.router, prefix=settings.API_V1_STR)
+"""
+from app.core.config import settings
 
 if __name__ == "__main__":
     import uvicorn
@@ -30,3 +25,4 @@ if __name__ == "__main__":
         reload=True,
         log_level="info"
     )
+"""    

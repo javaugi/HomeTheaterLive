@@ -4,11 +4,18 @@ import sentry_sdk
 from fastapi import FastAPI, APIRouter, Request
 
 from starlette.middleware.cors import CORSMiddleware
-from app.core.config import settings
 
 from contextlib import asynccontextmanager
 from fastapi.staticfiles import StaticFiles
 import os
+import sys
+from pathlib import Path
+
+# Add shared module to Python path before app.core.config import
+shared_path = Path(__file__).resolve().parent.parent.parent / "shared"
+sys.path.insert(0, str(shared_path))
+
+from app.core.config import settings
 print(">>> importing backend/app/main.py done")
 
 

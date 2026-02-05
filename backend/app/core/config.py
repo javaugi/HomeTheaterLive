@@ -1,22 +1,20 @@
-import secrets
-import warnings
-from typing import Annotated, Any, Literal, List, ClassVar
-
-from pydantic import (
-    AnyUrl,
-    BeforeValidator,
-    EmailStr,
-    HttpUrl,
-    PostgresDsn,
-    computed_field,
-    model_validator,
-)
-from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing_extensions import Self
-
+# backend/app/core/config.py
+from typing import Annotated, Any, List, Self
 from pathlib import Path
+import sys
+
+from pydantic import PostgresDsn, computed_field, BeforeValidator, HttpUrl, EmailStr, model_validator
+from pydantic_settings import SettingsConfigDict
+
+# Add project root to path before shared.config import
+project_root = Path(__file__).resolve().parent.parent.parent.parent
+sys.path.insert(0, str(project_root))
+
+from shared.config import BaseSettingsConfig
+
 
 def parse_cors(v: Any) -> list[str] | str:
+    """Parse CORS origins from string or list"""
     if isinstance(v, str) and not v.startswith("["):
         return [i.strip() for i in v.split(",") if i.strip()]
     elif isinstance(v, list | str):
@@ -24,96 +22,50 @@ def parse_cors(v: Any) -> list[str] | str:
     raise ValueError(v)
 
 
-class Settings(BaseSettings):
+class BackendSettings(BaseSettingsConfig):
+    """Backend-specific settings"""
+    
     model_config = SettingsConfigDict(
-        # Use top level .env file (one level above ./backend/)
         env_file="../.env",
         env_ignore_empty=True,
         extra="ignore",
+        env_prefix="BACKEND_",  # Optional: prefix for backend-specific env vars
     )
     
-    ENV_FILE_LOC: str = "../.env"
-    API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = secrets.token_urlsafe(32)
-    ALGORITHM: str = "HS256"
-    # Security
-    # SECRET_KEY: str = "your-secret-key-here-change-in-production"
-    # ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
-    #file upload
-    PROJ_DIR: ClassVar[Path] = Path(__file__).resolve().parent.parent.parent.parent
-    #VIDEO_OUTPUT_DIR: str = PROJ_DIR / "video_output"
-    VIDEO_OUTPUT_DIR: str = "../video_output"
+    # File Upload Settings
+    BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
     
-    # This gets the directory where main.py (or config.py) lives
-    BASE_DIR: ClassVar[Path] = Path(__file__).resolve().parent.parent
-    # Forces the path to be absolute
+    # Directory settings with automatic creation
     STATIC_DIR: Path = BASE_DIR / "static"
-    # Ensure the directory exists automatically
-    STATIC_DIR.mkdir(parents=True, exist_ok=True)
-
     UPLOAD_DIR: Path = BASE_DIR / "uploads"
-    # Ensure the directory exists automatically
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)    
-    #UPLOAD_DIR: str = "uploads"
-    #STATIC_DIR: str = "static"
-
+    VIDEO_OUTPUT_DIR: Path = BASE_DIR.parent / "video_output"
+    
+    # File settings
     MAX_FILE_SIZE: int = 100 * 1024 * 1024  # 100MB
     ALLOWED_IMAGE_TYPES: List[str] = [
         "image/jpeg", "image/png", "image/gif",
         "image/bmp", "image/tiff", "image/webp"
     ]
-    # Video Settings
+    
+    # Video Processing
     DEFAULT_FPS: int = 30
     DEFAULT_RESOLUTION: tuple = (1920, 1080)  # Full HD
     OUTPUT_FORMAT: str = "mp4"
-
-    # 60 minutes * 24 hours * 8 days = 8 days
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
+    
+    # CORS
     FRONTEND_HOST: str = "http://127.0.0.1:5173"
-    ENVIRONMENT: Literal["local", "staging", "production"] = "local"
-
     BACKEND_CORS_ORIGINS: Annotated[
-        list[AnyUrl] | str, BeforeValidator(parse_cors)
+        list[str] | str, BeforeValidator(parse_cors)
     ] = []
-    # CORS Origins
-    #BACKEND_CORS_ORIGINS: List[str] = [
-    #    "http://localhost:8000",
-    #    "http://localhost:8080",
-    #    "http://localhost:8081",
-    #    "*"  # For mobile development
-    #]
-
-    # Celery (for async processing)
-    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
-    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def all_cors_origins(self) -> list[str]:
-        return [str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS] + [
-            self.FRONTEND_HOST
-        ]
-
-    PROJECT_NAME: str = "Home Theater Live"
-    SENTRY_DSN: HttpUrl | None = None
-    POSTGRES_SERVER: str= "localhost"
+    
+    # Database
+    POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
-    POSTGRES_USER: str  = "mht_dev_user"
-    POSTGRES_PASSWORD: str = "mht_dev_pwd_108" 
-    POSTGRES_DB: str = "PG_MHT_DEV"   
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
-        return PostgresDsn.build(
-            scheme="postgresql+psycopg",
-            username=self.POSTGRES_USER,
-            password=self.POSTGRES_PASSWORD,
-            host=self.POSTGRES_SERVER,
-            port=self.POSTGRES_PORT,
-            path=self.POSTGRES_DB,
-        )
-
+    POSTGRES_USER: str = "mht_dev_user"
+    POSTGRES_PASSWORD: str = "mht_dev_pwd_108"
+    POSTGRES_DB: str = "PG_MHT_DEV"
+    
+    # Email/SMTP
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
     SMTP_PORT: int = 587
@@ -122,43 +74,65 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: str | None = None
     EMAILS_FROM_EMAIL: EmailStr | None = None
     EMAILS_FROM_NAME: str | None = None
-
+    EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
+    EMAIL_TEST_USER: EmailStr = "david.lee.remax@gmail.com"
+    
+    # Celery
+    CELERY_BROKER_URL: str = "redis://localhost:6379/0"
+    CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+    
+    @computed_field
+    @property
+    def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
+        """Build database URI from components"""
+        return PostgresDsn.build(
+            scheme="postgresql+psycopg",
+            username=self.POSTGRES_USER,
+            password=self.POSTGRES_PASSWORD,
+            host=self.POSTGRES_SERVER,
+            port=self.POSTGRES_PORT,
+            path=self.POSTGRES_DB,
+        )
+    
+    @computed_field
+    @property
+    def all_cors_origins(self) -> list[str]:
+        """Get all allowed CORS origins"""
+        origins = []
+        if isinstance(self.BACKEND_CORS_ORIGINS, list):
+            origins.extend([str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS])
+        elif isinstance(self.BACKEND_CORS_ORIGINS, str):
+            origins.append(self.BACKEND_CORS_ORIGINS.rstrip("/"))
+        origins.append(self.FRONTEND_HOST.rstrip("/"))
+        return origins
+    
+    @computed_field
+    @property
+    def emails_enabled(self) -> bool:
+        """Check if email functionality is enabled"""
+        return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
+    
     @model_validator(mode="after")
     def _set_default_emails_from(self) -> Self:
+        """Set default email from name if not provided"""
         if not self.EMAILS_FROM_NAME:
             self.EMAILS_FROM_NAME = self.PROJECT_NAME
         return self
-
-    EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
-
-    @computed_field  # type: ignore[prop-decorator]
-    @property
-    def emails_enabled(self) -> bool:
-        return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
-
-    EMAIL_TEST_USER: EmailStr = "david.lee.remax@gmail.com"
-    FIRST_SUPERUSER: EmailStr = "david.lee.remax@gmail.com"
-    FIRST_SUPERUSER_PASSWORD: str = "Jiaxiang1@8"
-
-    def _check_default_secret(self, var_name: str, value: str | None) -> None:
-        if value == "changethis":
-            message = (
-                f'The value of {var_name} is "changethis", '
-                "for security, please change it, at least for deployments."
-            )
-            if self.ENVIRONMENT == "local":
-                warnings.warn(message, stacklevel=1)
-            else:
-                raise ValueError(message)
-
+    
     @model_validator(mode="after")
-    def _enforce_non_default_secrets(self) -> Self:
-        self._check_default_secret("SECRET_KEY", self.SECRET_KEY)
+    def _create_directories(self) -> Self:
+        """Ensure required directories exist"""
+        self.STATIC_DIR.mkdir(parents=True, exist_ok=True)
+        self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        self.VIDEO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        return self
+    
+    @model_validator(mode="after")
+    def _validate_backend_secrets(self) -> Self:
+        """Backend-specific secret validation"""
         self._check_default_secret("POSTGRES_PASSWORD", self.POSTGRES_PASSWORD)
-        self._check_default_secret(
-            "FIRST_SUPERUSER_PASSWORD", self.FIRST_SUPERUSER_PASSWORD
-        )
-
         return self
 
-settings = Settings()  # type: ignore
+
+# Create settings instance
+settings = BackendSettings()
