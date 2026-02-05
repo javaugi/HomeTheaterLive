@@ -41,6 +41,7 @@ async def process_directory(
 
         # Store initial status
         processing_status[job_id] = {
+            "job_id": job_id,  # Add this line            
             "status": "processing",
             "progress": 0,
             "message": "Starting video creation...",
@@ -124,6 +125,7 @@ async def process_uploaded_images(
 
         # Store initial status
         processing_status[job_id] = {
+            "job_id": job_id,  # Add this line
             "status": "processing",
             "progress": 0,
             "message": f"Processing {len(saved_paths)} images...",
@@ -216,6 +218,7 @@ async def process_video_task(job_id: str, directory_path: str, settings: VideoSe
     """Background task for processing directory"""
     try:
         # Update status
+        processing_status[job_id]["job_id"] = job_id
         processing_status[job_id]["progress"] = 10
         processing_status[job_id]["message"] = "Scanning directory for images..."
 
@@ -259,6 +262,7 @@ async def process_video_task(job_id: str, directory_path: str, settings: VideoSe
 async def process_upload_task(job_id: str, image_paths: List[str], settings: VideoSettings, temp_dir: str):
     """Background task for processing uploaded files"""
     try:
+        processing_status[job_id]["job_id"] = job_id
         processing_status[job_id]["progress"] = 30
         processing_status[job_id]["message"] = "Processing images..."
 
@@ -324,6 +328,7 @@ async def create_video(
         
         # Store job info
         processing_status[job_id] = {
+            "job_id": job_id,  # Add this line            
             "status": "processing",
             "progress": 0,
             "message": "Uploading images...",
@@ -351,6 +356,7 @@ async def create_video(
         )
         
     except Exception as e:
+        print(f"backend/app/api/endpoints.py /videos/create status_code=500 exception={str(e)}")      
         raise HTTPException(status_code=500, detail=str(e))
 
 async def process_video_background(
@@ -367,6 +373,7 @@ async def process_video_background(
     print(f"backend/app/api/endpoints.py process_video_background job_id={job_id}, fps={fps}, image_paths={len(image_paths)}")      
     try:
         # Update status
+        processing_status[job_id]["job_id"] = job_id
         processing_status[job_id]["progress"] = 10
         processing_status[job_id]["message"] = "Processing images..."
         
@@ -395,6 +402,7 @@ async def process_video_background(
             processing_status[job_id]["message"] = result.get("error", "Unknown error")
             
     except Exception as e:
+        print(f"backend/app/api/endpoints.py process_video_background exception={str(e)}")      
         processing_status[job_id]["status"] = "failed"
         processing_status[job_id]["message"] = str(e)
     finally:

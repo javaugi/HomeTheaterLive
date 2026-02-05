@@ -350,7 +350,7 @@ class APIClient:
         await self.ensure_session()
         
         try:
-            print(f"DEBUG: create_video - Uploading {len(image_paths)} images")
+            print(f"DEBUG: mobile/src/myapp/api.py create_video - Uploading {len(image_paths)} images")
             # Prepare form data
             form_data = aiohttp.FormData()
             form_data.add_field('fps', str(fps))
@@ -361,6 +361,26 @@ class APIClient:
             if resolution:
                 form_data.add_field('resolution_width', str(resolution[0]))
                 form_data.add_field('resolution_height', str(resolution[1]))
+            
+            import io
+            for img_path in image_paths:
+                if isinstance(img_path, str) and Path(img_path).exists():
+                    with open(img_path, 'rb') as f:
+                        img_data = f.read()
+                    
+                    # Determine content type
+                    content_type = self._get_image_content_type(img_path)
+                    print(f"mobile/src/myapp/api.py create_video adding field content_type={content_type}")
+                    form_data.add_field(
+                        'files',
+                        io.BytesIO(img_data),
+                        filename=Path(img_path).name,
+                        content_type=content_type
+                    )
+                    print(f"DEBUG: Added image: {Path(img_path).name}")
+                else:
+                    print(f"DEBUG WARNING: Image not found: {img_path}")
+                    
             
             # Add image files
             """
@@ -375,27 +395,6 @@ class APIClient:
                         )
                     print(f"DEBUG: Added image: {Path(img_path).name}")
             """
-            import io
-            for img_path in image_paths:
-                if isinstance(img_path, str) and Path(img_path).exists():
-                    with open(img_path, 'rb') as f:
-                        img_data = f.read()
-                    
-                    # Determine content type
-                    content_type = self._get_image_content_type(img_path)
-                    
-                    form_data.add_field(
-                        'files',
-                        img_data,
-                        io.BytesIO(img_data),
-                        filename=Path(img_path).name,
-                        content_type=content_type
-                    )
-                    print(f"DEBUG: Added image: {Path(img_path).name}")
-                else:
-                    print(f"DEBUG WARNING: Image not found: {img_path}")
-                    
-            
             print(f"mobile/src/myapp/api.py create_video calling /videos/create, \n form_data={form_data}")
             # Send request
             # Send request
@@ -426,8 +425,8 @@ class APIClient:
             }
         
     def _get_image_content_type(self, filepath: str) -> str:
-        print(f"_get_image_content_type Determine content type based on file extension filepath={filepath}")
         ext = Path(filepath).suffix.lower()
+        print(f"_get_image_content_type Determine content type based on file extension filepath={filepath}, ext={ext}")
         
         content_types = {
             '.jpg': 'image/jpeg',
@@ -439,6 +438,7 @@ class APIClient:
             '.webp': 'image/webp'
         }
         
+        print(f"_get_image_content_type return value={content_types.get(ext, 'application/octet-stream')}")
         return content_types.get(ext, 'application/octet-stream')        
     
     async def get_video_status(self, job_id: str) -> Dict[str, Any]:
@@ -453,13 +453,15 @@ class APIClient:
             async with self.session.get(url) as response:
                 print(f"mobile/src/myapp/api.py get_video_status job_id={job_id} response.status={response.status}")
                 if response.status == 200:
-                    return await response.json()
-                else:
-                    return {
-                        'success': False,
-                        'status': 'error',                        
-                        'error': f"Server error: {response.status}"
-                    }
+                    print("DEBUG response.json type:", type(response.json))
+                    data = await response.json()
+                    print("DEBUG response.json data:", data)
+                    return data
+                return {
+                    'success': False,
+                    'status': 'error',                        
+                    'error': f"Server error: {response.status}"
+                }
         except aiohttp.ClientError as e:
             print(f"mobile/src/myapp/api.py get_video_status job_id={job_id} aiohttp.ClientError=str(e)")
             return {
@@ -541,7 +543,7 @@ class APIClient:
                 'error': f"Download error: {str(e)}"
             }            
     
-    async def poll_status(self, job_id: str, interval: float = 2.0, max_attempts: int = 300) -> Dict[str, Any]:
+    async def poll_status_max(self, job_id: str, interval: float = 2.0, max_attempts: int = 300) -> Dict[str, Any]:
         print("poll_status Poll for job completion job_id={job_id}")
         attempts = 0
         
@@ -565,7 +567,7 @@ class APIClient:
         
         return {'status': 'timeout', 'error': 'Processing timeout'}
     
-    async def poll_status_new(
+    async def poll_status(
         self, 
         job_id: str, 
         on_progress=None, 
@@ -588,6 +590,7 @@ class APIClient:
             
             # Get status
             status_data = await self.get_video_status(job_id)
+            print("Looping Poll for job completion status_data={status_data}")
             
             if not status_data.get('success', True):
                 return status_data
@@ -595,10 +598,13 @@ class APIClient:
             current_status = status_data.get('status')
             progress = status_data.get('progress', 0)
             message = status_data.get('message', '')
-            
+            print("Looping Poll for job completion current_status={current_status}, progress={progress}")
+                        
             # Call progress callback if provided
+            print("Looping Poll for job completion on_progress={on_progress}")
             if on_progress:
-                await on_progress(progress, message, current_status)
+                #await on_progress(progress, message, current_status)
+                on_progress(progress, message, current_status)
             
             # Check if processing is complete
             if current_status == 'completed':

@@ -750,8 +750,7 @@ class VideoView:
             print(f"DEBUG: create_video Settings - FPS: {fps}, Duration: {duration_per_image}, Transition: {transition}, quality: {quality}")
             
             
-            if not hasattr(self, 'api_client') or self.api_client is None:
-                self.api_client = await self.get_api_client()
+            self.api_client = await self.get_api_client()
             # Test connection first
             #if not await self.check_backend_connection():
             if not await self.api_client.test_connection():
@@ -775,11 +774,11 @@ class VideoView:
         """Check if backend is reachable"""
         try:
             print(f"DEBUG: video-view.py check_backend_connection calling {self.app.api_base_url}/health")
-            if not hasattr(self, 'api_client') or self.api_client is None:
-                self.api_client = await self.get_api_client()
+            self.api_client = await self.get_api_client()
             # Try to connect to the backend
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
                 async with session.get(f"{self.app.api_base_url}/health") as response:
+                    print(f"DEBUG: video-view.py check_backend_connection response.status={response.status}")
                     return response.status == 200
         except:
             return False
@@ -792,9 +791,7 @@ class VideoView:
             self.update_progress(10)
             
             # Initialize API client
-            if not hasattr(self, 'api_client') or self.api_client is None:
-                self.api_client = await self.get_api_client()
-            
+            self.api_client = await self.get_api_client()
             # Upload images and start processing
             result = await self.api_client.create_video(
                 image_paths=self.selected_images,
@@ -807,8 +804,9 @@ class VideoView:
             
             #if not result.get('success', False):
             #    raise ValueError(result.get('error', 'Unknown error from server'))
-            
+            await asyncio.sleep(5)
             job_id = result.get('job_id')
+            print(f"DEBUG: video-view.py process_with_backend job_id={job_id}")
             if not job_id:
                 #raise ValueError("No job ID received from server")
                 raise ValueError(result.get("message", "Failed to start video job on server"))                
@@ -825,7 +823,7 @@ class VideoView:
         except Exception as e:
             raise Exception(f"Backend processing failed: {str(e)}")
     
-    async def poll_video_progress(self, job_id, api):
+    async def poll_video_progress(self, job_id, api_client):
         """Poll for video progress"""
         print(f"DEBUG: video-view.py poll_video_progress job_id={job_id}")
         def on_progress_callback(progress, message, status):
@@ -834,7 +832,7 @@ class VideoView:
             self.update_status(message)
             return True  # Continue polling
         
-        result = await api.poll_status_new(
+        result = await api_client.poll_status(
             job_id=job_id,
             on_progress=on_progress_callback,
             interval=2.0,
@@ -935,9 +933,7 @@ class VideoView:
             self.update_status("Downloading video...")
             
             # Download from backend
-            if not hasattr(self, 'api_client') or self.api_client is None:
-                self.api_client = await self.get_api_client()
-            
+            self.api_client = await self.get_api_client()
             # Get filename from job status
             status = await self.api_client.get_video_status(self.current_job_id)
             if status.get('status') != 'completed':

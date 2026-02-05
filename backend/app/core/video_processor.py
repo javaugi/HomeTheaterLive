@@ -353,7 +353,7 @@ class VideoProcessor:
                         global_frame_idx += 1
                 
                 progress = 10 + (i / len(image_paths)) * 50
-                print(f"DEBUG: update_progress value: {int(progress)}")
+                print(f"DEBUG:backend/app/core/video-processor.py _create_video_ffmpeg update_progress value: {int(progress)}")
                         
             frame_count = global_frame_idx
             total_duration = frame_count / fps
@@ -395,6 +395,7 @@ class VideoProcessor:
             return video_path
             
         finally:
+            print(f"DEBUG:backend/app/core/video-processor.py _create_video_ffmpeg finally temp_dir: {temp_dir}")
             # Cleanup temp directory
             if os.path.exists(temp_dir):
                 shutil.rmtree(temp_dir)
