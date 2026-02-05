@@ -1,8 +1,43 @@
+# backend/app/models.py
+print(">>> importing #backend/app/models.py")
 import uuid
-
 from pydantic import EmailStr
-from sqlmodel import Field, Relationship, SQLModel
+from sqlmodel import Field, Relationship, SQLModel, Enum
+from sqlalchemy import Column, String, Integer, DateTime, Text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.sql import func
+from sqlalchemy.dialects.postgresql import UUID
+import enum
 
+Base = declarative_base()
+print(">>> importing #backend/app/models.py done")
+
+class ProcessingStatus(str, enum.Enum):
+    pending = 'pending'
+    processing = 'processing'
+    completed = 'completed'
+    failed = 'failed'
+    
+class ProcessingStatusDB(Base):
+    __tablename__ = "processing_status"
+    
+    id = Column(UUID(as_uuid=False), primary_key=True, default=lambda: uuid.uuid4().hex)
+    job_id = Column(String, nullable=False, index=True, unique=True)
+    status = Column(Enum(ProcessingStatus), index=True, nullable=False, default=ProcessingStatus.pending)
+    progress = Column(Integer, default=0)
+    message = Column(Text, nullable=True)
+    video_url = Column(String, nullable=True)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    completed_at = Column(DateTime(timezone=True), nullable=True)
+    error = Column(Text, nullable=True)
+
+    __table_args__ = (
+        {'extend_existing': True}
+    )
+
+    def __repr__(self):
+        return f"VideoJob(id={self.id}, job_id={self.job_id}, status={self.status})"    
 
 # Shared properties
 class UserBase(SQLModel):

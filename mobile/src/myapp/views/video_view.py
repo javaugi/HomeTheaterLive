@@ -16,6 +16,8 @@ import subprocess
 import json
 import shutil
 import aiohttp
+import httpx
+import aiofiles
 
 BASE_URL = "http://127.0.0.1:8000/api/v1"
 
@@ -29,6 +31,8 @@ logging.basicConfig(
 
 USE_BACKEND_API_CALL: bool = True
 #USE_BACKEND_API_CALL: bool = False
+USE_PATH_DOWNLOAD_CALL: bool = False
+#USE_BACKEND_API_CALL: bool = False
 
 class VideoView:
     """Main video processing view"""
@@ -37,23 +41,14 @@ class VideoView:
         self.app = app
         self.app.api_base_url = BASE_URL
         self.navigate_back_callback = navigate_back_callback
-        #from ..api import APIClient
-        #self.api_client = APIClient(app=self.app)
-        self.api_client = None  # Will be initialized when needed        
-
-        # Current state
-        self.selected_images = []
-        self.current_video_path = None  # Track the created video path
-        self.current_job_id = None
-        self.is_processing = False
 
         # Initialize UI elements to None
         self.init_ui_elements()
         try:
             self.container = self.create_ui()
-            print("DEBUG: VideoView UI built successfully")
+            print("DEBUG: mobile/src/myapp/views/video_view.py UI built successfully")
         except Exception as e:
-            print(f"DEBUG ERROR: Failed to build UI: {e}")
+            print(f"DEBUG ERROR: mobile/src/myapp/views/video_view.py Failed to build UI: {e}")
             raise
 
     async def get_api_client(self):
@@ -67,6 +62,10 @@ class VideoView:
     def init_ui_elements(self):
         """Initialize all UI element references"""
         # Core UI elements
+        self.api_client = None  # Will be initialized when needed        
+        self.selected_images = []
+        self.is_processing = False
+
         self.status_label = None
         self.file_list = None
         self.progress_bar = None
@@ -80,7 +79,13 @@ class VideoView:
         self.clear_btn = None
         self.create_video_btn = None
         self.download_btn = None
-
+        
+        self.video_url = None
+        self.current_job_id = None
+        self.current_video_url = None      # backend URL
+        self.current_video_filename = None 
+        self.current_video_path = None      # backend URL
+        
         # Inputs
         self.fps_input = None
         self.duration_input = None
@@ -225,7 +230,7 @@ class VideoView:
 
     def create_settings_section(self, parent):
         """Create video settings section"""
-        section_box = toga.Box(style=Pack(direction=COLUMN, margin=15))
+        section_box = toga.Box(style=Pack(direction=COLUMN, margin=10))
 
         # Section title
         title_box = toga.Box(style=Pack(direction=ROW, margin_bottom=10))
@@ -239,10 +244,10 @@ class VideoView:
         section_box.add(title_box)
 
         # FPS Setting
-        fps_box = toga.Box(style=Pack(direction=ROW, margin=8, text_align="center"))
+        fps_box = toga.Box(style=Pack(direction=ROW, margin=5, text_align="center"))
         fps_label = toga.Label(
             "Frame Rate (FPS):",
-            style=Pack(width=150, margin_right=10)
+            style=Pack(width=100, margin_right=10)
         )
         self.fps_input = toga.NumberInput(
             min=1,
@@ -255,10 +260,10 @@ class VideoView:
         section_box.add(fps_box)
 
         # Duration per image
-        duration_box = toga.Box(style=Pack(direction=ROW, margin=8, text_align="center"))
+        duration_box = toga.Box(style=Pack(direction=ROW, margin=5, text_align="center"))
         duration_label = toga.Label(
             "Seconds per image:",
-            style=Pack(width=150, margin_right=10)
+            style=Pack(width=100, margin_right=10)
         )
         self.duration_input = toga.NumberInput(
             min=0.5,
@@ -272,10 +277,10 @@ class VideoView:
         section_box.add(duration_box)
 
         # Transition type
-        transition_box = toga.Box(style=Pack(direction=ROW, margin=8, text_align="center"))
+        transition_box = toga.Box(style=Pack(direction=ROW, margin=5, text_align="center"))
         transition_label = toga.Label(
             "Transition effect:",
-            style=Pack(width=150, margin_right=10)
+            style=Pack(width=100, margin_right=10)
         )
         self.transition_select = toga.Selection(
             items=["None", "Fade", "Slide", "Zoom", "Crossfade"],
@@ -286,10 +291,10 @@ class VideoView:
         section_box.add(transition_box)
 
         # Video quality (simulated)
-        quality_box = toga.Box(style=Pack(direction=ROW, margin=8, text_align="center"))
+        quality_box = toga.Box(style=Pack(direction=ROW, margin=5, text_align="center"))
         quality_label = toga.Label(
             "Output Quality:",
-            style=Pack(width=150, margin_right=10)
+            style=Pack(width=100, margin_right=10)
         )
         self.quality_select = toga.Selection(
             items=["Low (480p)", "Medium (720p)", "High (1080p)", "Ultra (4K)"],
@@ -732,9 +737,9 @@ class VideoView:
             self.update_status("Starting video creation...")
             
             # Show progress container
-            print("Creating video show_progress_container ...")
+            print("mobile/src/myapp/views/video_view.py Creating video show_progress_container ...")
             self.show_progress_container()
-            print("Creating video update_progress ...")
+            print("mobile/src/myapp/views/video_view.py Creating video update_progress ...")
             self.update_progress(5)
             
             # Disable buttons during processing
@@ -745,9 +750,7 @@ class VideoView:
             duration_per_image = float(self.duration_input.value) if self.duration_input else 2.0
             transition = self.transition_select.value.lower() if self.transition_select else "none"
             quality = self.quality_select.value.lower() if self.quality_select else "high"
-            
-            print(f"DEBUG: create_video Creating video with {len(self.selected_images)} images")
-            print(f"DEBUG: create_video Settings - FPS: {fps}, Duration: {duration_per_image}, Transition: {transition}, quality: {quality}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py create_video_backend Creating video with {len(self.selected_images)} images \n Settings - FPS: {fps}, Duration: {duration_per_image}, Transition: {transition}, quality: {quality}")
             
             
             self.api_client = await self.get_api_client()
@@ -760,10 +763,11 @@ class VideoView:
                 return
             
             # Send to backend for processing
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py create_video_backend calling process_with_backend with {len(self.selected_images)} images")
             await self.process_with_backend(fps, duration_per_image, transition, quality)
             
         except Exception as e:
-            error_msg = f"Video creation failed: {str(e)}"
+            error_msg = f"mobile/src/myapp/views/video_view.py create_video_backend Video creation failed: {str(e)}"
             print(f"DEBUG ERROR: {error_msg}")
             self.show_error(error_msg)
             self.is_processing = False
@@ -773,12 +777,12 @@ class VideoView:
     async def check_backend_connection(self):
         """Check if backend is reachable"""
         try:
-            print(f"DEBUG: video-view.py check_backend_connection calling {self.app.api_base_url}/health")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py check_backend_connection calling {self.app.api_base_url}/health")
             self.api_client = await self.get_api_client()
             # Try to connect to the backend
             async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=5)) as session:
                 async with session.get(f"{self.app.api_base_url}/health") as response:
-                    print(f"DEBUG: video-view.py check_backend_connection response.status={response.status}")
+                    print(f"DEBUG: mobile/src/myapp/views/video_view.py check_backend_connection response.status={response.status}")
                     return response.status == 200
         except:
             return False
@@ -786,7 +790,7 @@ class VideoView:
     async def process_with_backend(self, fps, duration_per_image, transition, quality):
         """Process video using backend API"""
         try:
-            print(f"DEBUG: video-view.py process_with_backend fps={fps}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py process_with_backend fps={fps}")
             self.update_status("Uploading images to server...")
             self.update_progress(10)
             
@@ -800,13 +804,13 @@ class VideoView:
                 transition_type=transition,
                 quality=quality
             )
-            print(f"DEBUG: video-view.py process_with_backend calling self.api_client.create_video result={result}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py process_with_backend calling self.api_client.create_video result={result}")
             
             #if not result.get('success', False):
             #    raise ValueError(result.get('error', 'Unknown error from server'))
             await asyncio.sleep(5)
             job_id = result.get('job_id')
-            print(f"DEBUG: video-view.py process_with_backend job_id={job_id}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py process_with_backend job_id={job_id}")
             if not job_id:
                 #raise ValueError("No job ID received from server")
                 raise ValueError(result.get("message", "Failed to start video job on server"))                
@@ -817,34 +821,52 @@ class VideoView:
             
             # Poll for completion
             #await self.poll_backend_progress(job_id)
-            print(f"DEBUG: video-view.py process_with_backend calling poll_video_progress job_id={job_id}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py process_with_backend calling poll_video_progress job_id={job_id}")
             await self.poll_video_progress(job_id, self.api_client)
             
         except Exception as e:
-            raise Exception(f"Backend processing failed: {str(e)}")
+            raise Exception(f"mobile/src/myapp/views/video_view.py process_with_backend throws exception: {str(e)}")
     
     async def poll_video_progress(self, job_id, api_client):
         """Poll for video progress"""
-        print(f"DEBUG: video-view.py poll_video_progress job_id={job_id}")
+        print(f"DEBUG: mobile/src/myapp/views/video_view.py poll_video_progress job_id={job_id}")
         def on_progress_callback(progress, message, status):
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py poll_video_progress on_progress_callback \n job_id={job_id}, progress={progress}, message={message}, status={status}")
             # This runs in the async context
             self.update_progress(progress)
             self.update_status(message)
             return True  # Continue polling
         
+        print(f"DEBUG: mobile/src/myapp/views/video_view.py poll_video_progress calling poll_status job_id={job_id}")
         result = await api_client.poll_status(
             job_id=job_id,
             on_progress=on_progress_callback,
-            interval=2.0,
-            timeout=600.0,
+            interval=6.0,
+            timeout=3600.0,
             max_attempts=300
         )
         
-        if result.get('success'):
+        print(f"DEBUG: mobile/src/myapp/views/video_view.py poll_video_progress job_id={job_id}, result={result}, \n video_url={result.get('video_url')}")        
+        if result.get('status') == 'completed':
+            print(f"poll_video_progress Video creation completed video_path: {result.get('video_path')}, video_url: {result.get('video_url')}")
+            
             self.update_status("Video created successfully!")
             self.download_btn.enabled = True
+            
+            self.current_job_id = job_id
+            self.current_video_filename = result.get("filename")
+            self.current_video_path = result.get("video_path")
+            self.video_url = result.get("video_url")
+            self.current_video_url = self.video_url
+            # ✅ derive filename safely
+            if self.current_video_url:
+                self.current_video_filename = self.current_video_url.split("/")[-1]
+            else:
+                self.current_video_filename = "video.mp4"
+                
+            print(f"poll_video_progress Video creation completed current_video_url: {self.current_video_url}, current_video_filename: {self.current_video_filename}")
         else:
-            raise ValueError(result.get('error', 'Processing failed'))
+            raise ValueError(result.get('error', 'mobile/src/myapp/views/video_view.py poll_video_progress Processing failed'))
     
     async def cleanup(self):
         """Cleanup resources"""
@@ -854,7 +876,7 @@ class VideoView:
     async def poll_backend_progress(self, job_id):
         """Poll backend for processing progress"""
         try:
-            print(f"DEBUG: video-view.py poll_backend_progress self.api_client.get_video_status(job_id) job_id={job_id}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py poll_backend_progress self.api_client.get_video_status(job_id) job_id={job_id}")
             last_progress = 0
             
             while True:
@@ -862,7 +884,7 @@ class VideoView:
                 status = await self.api_client.get_video_status(job_id)
                 
                 if not status.get('success', True):
-                    raise ValueError(status.get('error', 'Status check failed'))
+                    raise ValueError(status.get('error', 'mobile/src/myapp/views/video_view.py poll_backend_progress Status check failed'))
                 
                 current_status = status.get('status')
                 progress = status.get('progress', 0)
@@ -877,12 +899,17 @@ class VideoView:
                 # Check if done
                 if current_status == 'completed':
                     # Get video URL
-                    video_url = status.get('video_url')
-                    video_filename = os.path.basename(video_url) if video_url else None
+                    self.current_job_id = job_id
+                    self.current_video_path = status.get("video_path")                    
+                    self.video_url = status.get('video_url')
+                    self.current_video_url = self.video_url
+                    # ✅ derive filename safely
+                    if self.current_video_url:
+                        self.current_video_filename = self.current_video_url.split("/")[-1]
+                    else:
+                        self.current_video_filename = "video.mp4"
                     
-                    if video_filename:
-                        self.current_video_filename = video_filename
-                        self.current_job_id = job_id
+                    print(f"poll_backend_progress Video creation completed current_video_url: {self.current_video_url}, current_video_filename: {self.current_video_filename}")
                     
                     # Final update
                     self.update_progress(100)
@@ -900,19 +927,19 @@ class VideoView:
                     break
                     
                 elif current_status == 'failed':
-                    error_msg = status.get('message', 'Processing failed')
-                    raise ValueError(f"Server processing failed: {error_msg}")
+                    error_msg = status.get('message', 'mobile/src/myapp/views/video_view.py poll_backend_progress Processing failed')
+                    raise ValueError(f"mobile/src/myapp/views/video_view.py poll_backend_progress Server processing failed: {error_msg}")
                 
                 # Wait before polling again
                 await asyncio.sleep(2)  # Poll every 2 seconds
                 
         except Exception as e:
-            raise Exception(f"Progress polling failed: {str(e)}")
+            raise Exception(f"mobile/src/myapp/views/video_view.py poll_backend_progress Progress polling failed: {str(e)}")
     
     async def download_video_bk0(self, widget):
         """Download video from backend"""
         try:
-            print(f"DEBUG: video-view.py download_video self.current_job_id={self.current_job_id}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py download_video self.current_job_id={self.current_job_id}")
             if not self.current_job_id:
                 self.show_error("No video has been created yet")
                 return
@@ -937,11 +964,11 @@ class VideoView:
             # Get filename from job status
             status = await self.api_client.get_video_status(self.current_job_id)
             if status.get('status') != 'completed':
-                raise ValueError("Video is not ready for download")
+                raise ValueError("mobile/src/myapp/views/video_view.py  Video is not ready for download")
             
             video_url = status.get('video_url')
             if not video_url:
-                raise ValueError("No video URL available")
+                raise ValueError("mobile/src/myapp/views/video_view.py No video URL available")
             
             video_filename = os.path.basename(video_url)
             
@@ -949,10 +976,10 @@ class VideoView:
             success = await self.api_client.download_video(video_filename, save_path)
             
             if not success:
-                raise ValueError("Download failed")
+                raise ValueError("mobile/src/myapp/views/video_view.py Download failed")
             
             self.update_progress(100)
-            self.update_status("Download complete!")
+            self.update_status("mobile/src/myapp/views/video_view.py Download complete!")
             
             # Show success
             await self.show_download_success(save_path)
@@ -961,7 +988,7 @@ class VideoView:
             self.hide_progress_container()
             
         except Exception as e:
-            error_msg = f"Download failed: {str(e)}"
+            error_msg = f"mobile/src/myapp/views/video_view.py Download failed: {str(e)}"
             print(f"DEBUG ERROR: {error_msg}")
             self.show_error(error_msg)
             self.hide_progress_container()
@@ -981,12 +1008,12 @@ class VideoView:
         """Create actual H.264 video from selected images"""
         print(f"Creating video from selected images self.is_processing:{self.is_processing}")
         if self.is_processing:
-            self.show_error("Already processing a video")
+            self.show_error("mobile/src/myapp/views/video_view.py create_video_frontend Already processing a video")
             return
         
-        print(f"Creating video from selected {len(self.selected_images)} images")
+        print(f"mobile/src/myapp/views/video_view.py create_video_frontend Creating video from selected {len(self.selected_images)} images")
         if not self.selected_images:
-            self.show_error("Please select images first")
+            self.show_error("mobile/src/myapp/views/video_view.py create_video_frontend Please select images first")
             return
         
         try:
@@ -994,9 +1021,9 @@ class VideoView:
             self.update_status("Starting video creation...")
             
             # Show progress container
-            print("Creating video show_progress_container ...")
+            print("mobile/src/myapp/views/video_view.py create_video_frontend Creating video show_progress_container ...")
             self.show_progress_container()
-            print("Creating video update_progress ...")
+            print("mobile/src/myapp/views/video_view.py create_video_frontend Creating video update_progress ...")
             self.update_progress(5)
             
             # Disable buttons during processing
@@ -1008,8 +1035,8 @@ class VideoView:
             transition = self.transition_select.value.lower() if self.transition_select else "none"
             quality = "high"  # Default quality
             
-            print(f"DEBUG: create_video Creating video with {len(self.selected_images)} images")
-            print(f"DEBUG: create_video Settings - FPS: {fps}, Duration: {duration_per_image}, Transition: {transition}, quality: {quality}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py create_video_frontend  Creating video with {len(self.selected_images)} images")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py create_video_frontend  Settings - FPS: {fps}, Duration: {duration_per_image}, Transition: {transition}, quality: {quality}")
             
             # Create actual video using OpenCV
             #await self.create_actual_video(fps, duration_per_image, transition, quality)
@@ -1032,10 +1059,10 @@ class VideoView:
             # Enable download button
             self.download_btn.enabled = True
             # Set a simulated video path
-            print("DEBUG: Video creation complete, download enabled")
+            print("DEBUG: mobile/src/myapp/views/video_view.py create_video_frontend  Video creation complete, download enabled")
             
         except Exception as e:
-            error_msg = f"Video creation failed: {str(e)}"
+            error_msg = f"mobile/src/myapp/views/video_view.py create_video_frontend Video creation failed: {str(e)}"
             print(f"DEBUG ERROR: {error_msg}")
             self.show_error(error_msg)
             self.is_processing = False
@@ -1065,7 +1092,7 @@ class VideoView:
     async def create_actual_video(self, fps, duration_per_image, transition, quality):
         """Create actual H.264 video file"""
         try:
-            print(f"create_actual_video Preparing images calling update_status/update_progress self.selected_images={self.selected_images}")
+            print(f"mobile/src/myapp/views/video_view.py create_actual_video Preparing images calling update_status/update_progress self.selected_images={self.selected_images}")
             self.update_status("Preparing images...")
             self.update_progress(10)
             
@@ -1075,20 +1102,20 @@ class VideoView:
                 if isinstance(img_path, str) and Path(img_path).exists():
                     valid_images.append(img_path)
                 else:
-                    print(f"DEBUG: Image not found: {img_path}")
+                    print(f"DEBUG: mobile/src/myapp/views/video_view.py create_actual_video Image not found: {img_path}")
             
-            print(f"create_actual_video calling update_status/update_progress valid_images={valid_images}")
+            print(f"mobile/src/myapp/views/video_view.py create_actual_video calling update_status/update_progress valid_images={valid_images}")
             if not valid_images:
-                raise ValueError("No valid images found")
+                raise ValueError("mobile/src/myapp/views/video_view.py create_actual_video No valid images found")
             
-            print(f"2 create_actual_video Processing images calling update_status/update_progress  valid_images={valid_images}")
+            print(f"2 mobile/src/myapp/views/video_view.py create_actual_video Processing images calling update_status/update_progress  valid_images={valid_images}")
             self.update_status(f"Processing {len(valid_images)} images...")
             self.update_progress(20)
             
             # Read first image to get dimensions
             first_img = cv2.imread(valid_images[0])
             if first_img is None:
-                raise ValueError(f"Could not read first image: {valid_images[0]}")
+                raise ValueError(f"mobile/src/myapp/views/video_view.py create_actual_video Could not read first image: {valid_images[0]}")
             
             height, width = first_img.shape[:2]
             
@@ -1096,7 +1123,7 @@ class VideoView:
             width = width - (width % 2)
             height = height - (height % 2)
             
-            print(f"3 create_actual_video Creating video frames calling update_status/update_progress image height={height}")
+            print(f"3 mobile/src/myapp/views/video_view.py create_actual_video Creating video frames calling update_status/update_progress image height={height}")
             self.update_status("Creating video frames...")
             self.update_progress(35)
             
@@ -1128,13 +1155,13 @@ class VideoView:
                     
                     if video_writer.isOpened():
                         codec_used = codec_name
-                        print(f"DEBUG: Using codec: {codec_name}")
+                        print(f"DEBUG:mobile/src/myapp/views/video_view.py create_actual_video Using codec: {codec_name}")
                         break
                     else:
                         if video_writer:
                             video_writer.release()
                 except Exception as e:
-                    print(f"DEBUG: Codec {codec_name} failed: {e}")
+                    print(f"DEBUG:mobile/src/myapp/views/video_view.py create_actual_video Codec {codec_name} failed: {e}")
                     continue
             
             if not video_writer or not video_writer.isOpened():
@@ -1145,7 +1172,7 @@ class VideoView:
                 total_frames = len(valid_images) * frames_per_image
                 frames_written = 0
                 
-                print(f"4 create_actual_video Encoding video calling update_status total_frames={total_frames}")
+                print(f"4 mobile/src/myapp/views/video_view.py create_actual_video Encoding video calling update_status total_frames={total_frames}")
                 self.update_status("Encoding video...")
                 
                 # Process each image
@@ -1157,7 +1184,7 @@ class VideoView:
                     
                     img = cv2.imread(img_path)
                     if img is None:
-                        print(f"DEBUG: Could not read image: {img_path}")
+                        print(f"DEBUG: mobile/src/myapp/views/video_view.py create_actual_video Could not read image: {img_path}")
                         continue
                     
                     # Resize if needed
@@ -1184,17 +1211,17 @@ class VideoView:
                 video_writer.release()
                 cv2.destroyAllWindows()
                 
-                print("5 create_actual_video Finalizing video frames calling update_status/update_progress ")
+                print("5 mobile/src/myapp/views/video_view.py create_actual_video Finalizing video frames calling update_status/update_progress ")
                 self.update_progress(90)
                 self.update_status("Finalizing video...")
                 
                 # Verify video was created
                 if not os.path.exists(temp_video_path):
-                    raise ValueError("Video file was not created")
+                    raise ValueError("mobile/src/myapp/views/video_view.py create_actual_video Video file was not created")
                 
                 video_size = os.path.getsize(temp_video_path)
                 if video_size == 0:
-                    raise ValueError("Video file is empty")
+                    raise ValueError("mobile/src/myapp/views/video_view.py create_actual_video Video file is empty")
                 
                 # Store the video path for download
                 self.current_video_path = temp_video_path
@@ -1206,7 +1233,7 @@ class VideoView:
                 self.update_progress(100)
                 self.update_status(f"H.264 video created successfully! ({self.format_bytes(video_size)}), self.current_video_filename={self.current_video_filename}, self.current_video_path={self.current_video_path}")
                 
-                print(f"DEBUG: Video created: {temp_video_path}")
+                print(f"DEBUG: mobile/src/myapp/views/video_view.py create_actual_video Video created: {self.current_video_path}")
                 print(f"DEBUG: Video size: {video_size} bytes")
                 print(f"DEBUG: Codec used: {codec_used}")
                 print(f"DEBUG: Resolution: {width}x{height}")
@@ -1236,14 +1263,14 @@ class VideoView:
                     video_writer.release()
                 
         except Exception as e:
-            print(f"DEBUG ERROR in create_actual_video: {e}")
+            print(f"DEBUG ERROR in mobile/src/myapp/views/video_view.py create_actual_video: {e}")
             raise
             
             
     async def create_video_with_ffmpeg(self, fps, duration_per_image, transition, quality):
         """Create H.264 video using FFmpeg (most reliable)"""
         try:
-            print("create_video_with_ffmpeg calling update_status")
+            print("mobile/src/myapp/views/video_view.py create_video_with_ffmpeg calling update_status")
             self.update_status("Checking FFmpeg...")
             
             # Check if FFmpeg is available
@@ -1260,14 +1287,14 @@ class VideoView:
                 await self._create_with_opencv(fps, duration_per_image, transition)
                 
         except Exception as e:
-            raise Exception(f"FFmpeg video creation failed: {str(e)}")
+            raise Exception(f"mobile/src/myapp/views/video_view.py create_video_with_ffmpeg FFmpeg video creation failed: {str(e)}")
     
     async def _create_with_ffmpeg(self, fps, duration_per_image, quality):
         """Create video using FFmpeg"""
         
         try:
             temp_dir = tempfile.mkdtemp(prefix="video_frames_")
-            print(f"_create_with_ffmpeg  temp_dir={temp_dir}, calling update_status/update_progress")
+            print(f"mobile/src/myapp/views/video_view.py _create_with_ffmpeg  temp_dir={temp_dir}, calling update_status/update_progress")
             self.update_status("Preparing images for FFmpeg...")
             self.update_progress(20)
             
@@ -1315,12 +1342,12 @@ class VideoView:
             
             frame_count = len(self.selected_images)
             total_duration = frame_count / fps
-            print(f"_create_with_ffmpeg settings fps={fps}, frame_count={frame_count}, total_duration={total_duration}")
+            print(f"mobile/src/myapp/views/video_view.py _create_with_ffmpeg settings fps={fps}, frame_count={frame_count}, total_duration={total_duration}")
             
             # Create video using FFmpeg
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             video_path = os.path.join(tempfile.gettempdir(), f"video_{timestamp}.mp4")
-            print(f"_create_with_ffmpeg settings fps={fps}, timestamp={timestamp}, video_path={video_path}")
+            print(f"mobile/src/myapp/views/video_view.py _create_with_ffmpeg settings fps={fps}, timestamp={timestamp}, video_path={video_path}")
             
             # H.264 encoding settings
             preset = "medium"  # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
@@ -1340,7 +1367,7 @@ class VideoView:
                 video_path
             ]
             
-            print(f"DEBUG: Running FFmpeg command: {' '.join(ffmpeg_cmd)}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py _create_with_ffmpeg  \n Running FFmpeg command: {' '.join(ffmpeg_cmd)}")
             """ sample command
             ffmpeg -y -framerate 24 -i C:/Users/javau/AppData/Local/Temp\video_frames_bvxs04og/frame_%06d.png -c:v libx264 -preset medium -crf 23 -pix_fmt yuv420p -movflags +faststart -r 24 C:/Users/javau/AppData/Local/Temp/video_20260124_165034.mp4
             
@@ -1363,17 +1390,17 @@ class VideoView:
             stdout, stderr = await process.communicate()
             
             if process.returncode != 0:
-                raise RuntimeError(f"FFmpeg failed: {stderr.decode()}")
+                raise RuntimeError(f"mobile/src/myapp/views/video_view.py _create_with_ffmpeg FFmpeg failed: {stderr.decode()}")
             
             self.update_progress(95)
             
             # Verify output
             if not os.path.exists(video_path):
-                raise ValueError("FFmpeg did not create output file")
+                raise ValueError("mobile/src/myapp/views/video_view.py _create_with_ffmpeg FFmpeg did not create output file")
             
             video_size = os.path.getsize(video_path)
             if video_size == 0:
-                raise ValueError("Output video file is empty")
+                raise ValueError("mobile/src/myapp/views/video_view.py _create_with_ffmpeg Output video file is empty")
             
             self.current_video_path = video_path
             self.current_video_filename = f"video_{timestamp}.mp4"
@@ -1381,8 +1408,7 @@ class VideoView:
             self.update_progress(100)
             self.update_status(f"H.264 video created with FFmpeg! ({self.format_bytes(video_size)})")
             
-            print(f"DEBUG: FFmpeg video created: {video_path}")
-            print(f"DEBUG: Video size: {video_size} bytes")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py FFmpeg video created: {video_path} Video size: {video_size} bytes")
             
         finally:
             # Cleanup temp directory
@@ -1393,7 +1419,7 @@ class VideoView:
     async def _create_with_opencv(self, fps, duration_per_image, transition):
         """Create video using OpenCV when FFmpeg is not available"""
         try:
-            print(f"DEBUG: _create_with_opencv OpenCV version: {cv2.__version__}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py _create_with_opencv  OpenCV version: {cv2.__version__}")
             self.update_status("Creating video with OpenCV...")
             self.update_progress(25)
             
@@ -1406,24 +1432,24 @@ class VideoView:
                     if path.exists():
                         valid_images.append(str(path))
                     else:
-                        print(f"DEBUG: Image not found, using placeholder: {img_path}")
+                        print(f"DEBUG:mobile/src/myapp/views/video_view.py _create_with_opencv Image not found, using placeholder: {img_path}")
                         # Create a placeholder image
                         placeholder = self._create_placeholder_image()
                         temp_path = os.path.join(tempfile.gettempdir(), f"placeholder_{len(valid_images)}.png")
                         cv2.imwrite(temp_path, placeholder)
                         valid_images.append(temp_path)
                 else:
-                    print(f"DEBUG: Invalid image path type: {type(img_path)}")
+                    print(f"DEBUG: mobile/src/myapp/views/video_view.py _create_with_opencv Invalid image path type: {type(img_path)}")
             
             if not valid_images:
-                raise ValueError("No valid images to process")
-            print(f"DEBUG: Processing {len(valid_images)} images with OpenCV")
+                raise ValueError("mobile/src/myapp/views/video_view.py _create_with_opencv No valid images to process")
+            print(f"DEBUG:mobile/src/myapp/views/video_view.py _create_with_opencv Processing {len(valid_images)} images with OpenCV")
             
             end_time = time.time()
             frame_count = len(self.selected_images)
             duration = end_time - start_time
             fps_calc = max(1, round(frame_count / duration, 2))
-            print(f"_create_with_ffmpeg settings fps={fps}, to be reset to thes fps_calc={fps_calc}, duration={duration}, frame_count={frame_count}")
+            print(f"mobile/src/myapp/views/video_view.py _create_with_opencv settings fps={fps}, to be reset to thes fps_calc={fps_calc}, duration={duration}, frame_count={frame_count}")
             fps = fps_calc
             
             # Read first image to get dimensions
@@ -1435,7 +1461,7 @@ class VideoView:
                     pil_img = Image.open(valid_images[0])
                     first_img = cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
                 except:
-                    raise ValueError(f"Could not read first image: {valid_images[0]}")
+                    raise ValueError(f"mobile/src/myapp/views/video_view.py _create_with_opencv Could not read first image: {valid_images[0]}")
             
             height, width = first_img.shape[:2]
             
@@ -1450,7 +1476,7 @@ class VideoView:
             # Create output video path
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             video_path = os.path.join(tempfile.gettempdir(), f"opencv_video_{timestamp}.mp4")
-            print(f"DEBUG: reate output video path={video_path} image with OpenCV")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py _create_with_opencv reate output video path={video_path} image with OpenCV")
 
             # Try different video codecs in order of preference
             codecs = [
@@ -1478,20 +1504,20 @@ class VideoView:
                     
                     if video_writer.isOpened():
                         codec_used = codec_name
-                        print(f"DEBUG: Successfully opened video writer with codec: {codec_name}")
+                        print(f"DEBUG: mobile/src/myapp/views/video_view.py _create_with_opencv Successfully opened video writer with codec: {codec_name}")
                         break
                     else:
                         if video_writer:
                             video_writer.release()
-                        print(f"DEBUG: Codec {codec_name} failed to open")
+                        print(f"DEBUG: mobile/src/myapp/views/video_view.py _create_with_opencv Codec {codec_name} failed to open")
                 except Exception as e:
-                    print(f"DEBUG: Codec {codec_name} error: {e}")
+                    print(f"DEBUG:mobile/src/myapp/views/video_view.py _create_with_opencv Codec {codec_name} error: {e}")
                     continue
             
             if not video_writer or not video_writer.isOpened():
                 # Try one more time with default parameters
                 try:
-                    print("DEBUG: Trying fallback with default parameters")
+                    print("DEBUG:mobile/src/myapp/views/video_view.py _create_with_opencv Trying fallback with default parameters")
                     video_writer = cv2.VideoWriter(
                         video_path,
                         cv2.VideoWriter_fourcc(*'mp4v'),
@@ -1500,11 +1526,11 @@ class VideoView:
                     )
                     if video_writer.isOpened():
                         codec_used = 'MP4V (fallback)'
-                        print("DEBUG: Fallback succeeded")
+                        print("DEBUG:mobile/src/myapp/views/video_view.py _create_with_opencv Fallback succeeded")
                     else:
-                        raise ValueError("Could not create video writer with any codec")
+                        raise ValueError("mobile/src/myapp/views/video_view.py _create_with_opencv Could not create video writer with any codec")
                 except Exception as e:
-                    raise ValueError(f"All video codecs failed: {e}")
+                    raise ValueError(f"mobile/src/myapp/views/video_view.py _create_with_opencv All video codecs failed: {e}")
             
             try:
                 # Calculate frames per image
@@ -1512,7 +1538,7 @@ class VideoView:
                 total_images = len(valid_images)
                 total_frames = total_images * frames_per_image
                 
-                print(f"DEBUG: Video parameters: - Resolution: {width}x{height}")
+                print(f"DEBUG: mobile/src/myapp/views/video_view.py _create_with_opencv Video parameters: - Resolution: {width}x{height}")
                 print(f"  - FPS: {fps}")
                 print(f"  - Frames per image: {frames_per_image}")
                 print(f"  - Total images: {total_images}")
@@ -1532,7 +1558,7 @@ class VideoView:
                     # Load image
                     img = cv2.imread(img_path)
                     if img is None:
-                        print(f"DEBUG: Could not load {img_path}, creating placeholder")
+                        print(f"DEBUG:mobile/src/myapp/views/video_view.py _create_with_opencv Could not load {img_path}, creating placeholder")
                         img = self._create_placeholder_image()
                     
                     # Resize to target dimensions
@@ -1574,11 +1600,11 @@ class VideoView:
                 
                 # Verify the video was created
                 if not os.path.exists(video_path):
-                    raise ValueError(f"Video file was not created at {video_path}")
+                    raise ValueError(f"mobile/src/myapp/views/video_view.py _create_with_opencv Video file was not created at {video_path}")
                 
                 video_size = os.path.getsize(video_path)
                 if video_size == 0:
-                    raise ValueError("Video file is empty (0 bytes)")
+                    raise ValueError("mobile/src/myapp/views/video_view.py _create_with_opencv Video file is empty (0 bytes)")
                 
                 # Try to open and verify the video
                 cap = cv2.VideoCapture(video_path)
@@ -1589,7 +1615,7 @@ class VideoView:
                     frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                     cap.release()
                     
-                    print(f"DEBUG: Video created successfully:  - File: {video_path}")
+                    print(f"DEBUG: mobile/src/myapp/views/video_view.py _create_with_opencv Video created successfully:  - File: {video_path}")
                     print(f"  - Size: {await self._format_bytes(video_size)}")
                     print(f"  - Actual resolution: {actual_width}x{actual_height}")
                     print(f"  - Actual FPS: {actual_fps}")
@@ -1597,12 +1623,12 @@ class VideoView:
                     print(f"  - Duration: {frame_count/actual_fps:.2f} seconds")
                     
                     if actual_width == 0 or actual_height == 0:
-                        print("DEBUG: WARNING: Video has invalid dimensions")
+                        print("DEBUG:mobile/src/myapp/views/video_view.py _create_with_opencv WARNING: Video has invalid dimensions")
                     
                     if frame_count == 0:
-                        print("DEBUG: WARNING: Video has 0 frames")
+                        print("DEBUG:mobile/src/myapp/views/video_view.py _create_with_opencv WARNING: Video has 0 frames")
                 else:
-                    print("DEBUG: WARNING: Could not open video for verification")
+                    print("DEBUG:mobile/src/myapp/views/video_view.py _create_with_opencv WARNING: Could not open video for verification")
                     # File might still be valid but OpenCV can't read it
                 
                 # Store video information
@@ -1619,12 +1645,12 @@ class VideoView:
                 }
                 
                 self.update_progress(100)
-                self.update_status(f"Video created successfully! ({await self._format_bytes(video_size)})")
+                self.update_status(f"mobile/src/myapp/views/video_view.py _create_with_opencv Video created successfully! ({await self._format_bytes(video_size)})")
                 
-                print(f"DEBUG: Video ready for download: self.current_video_filename={self.current_video_filename}, self.current_video_path={self.current_video_path}")
+                print(f"DEBUG:mobile/src/myapp/views/video_view.py _create_with_opencv  Video ready for download: self.current_video_filename={self.current_video_filename}, self.current_video_path={self.current_video_path}")
                 
             except Exception as e:
-                print(f"Error: Creating Video : {e}")
+                print(f"Error: mobile/src/myapp/views/video_view.py _create_with_opencv Creating Video : {e}")
                 # Clean up video writer if it exists
                 if video_writer:
                     try:
@@ -1634,10 +1660,10 @@ class VideoView:
                 raise
         
         except Exception as e:
-            print(f"DEBUG ERROR in _create_with_opencv: {str(e)}")
+            print(f"DEBUG ERROR in mobile/src/myapp/views/video_view.py _create_with_opencv: {str(e)}")
             import traceback
             traceback.print_exc()
-            raise Exception(f"OpenCV video creation failed: {str(e)}")
+            raise Exception(f"mobile/src/myapp/views/video_view.py _create_with_opencv video creation failed: {str(e)}")
         
     async def _apply_fade_transition(self, writer, img1, img2, fps, duration=0.5):
         """Apply fade transition between two images"""
@@ -1813,21 +1839,26 @@ class VideoView:
     async def download_video(self, widget):
         """Download the created video"""
         try:
-            print(f"DEBUG: self.current_video_path = {self.current_video_path}")            
-            if not self.current_video_path:
-                print("DEBUG: No video created yet, simulating one...")
-                await self.create_video()
-                
+            debugmsg = f"""
+                DEBUG:mobile/src/myapp/views/video_view.py download_video called  
+                \n current_video_url={self.current_video_url}
+                current_video_path={self.current_video_path}
+                current_video_filename={self.current_video_filename}
+            """
+            print(debugmsg)
             
-                if not self.current_video_path:
-                    raise ValueError("Video creation failed")                
-                    return
-            
-            print(f"DEBUG: Starting download of {self.current_video_path}")
+            if not self.current_video_url:
+                if self.current_video_path and os.path.exists(self.current_video_path):
+                    self.current_video_url = f"/api/v1/videos/{os.path.basename(self.current_video_path)}"
+
+            if not self.current_video_url:
+                raise ValueError("Video creation failed")                
+                return
+
             await self.perform_download()
             
         except Exception as e:
-            error_msg = f"Download failed: {str(e)}"
+            error_msg = f"mobile/src/myapp/views/video_view.py download_video Download failed: {str(e)}"
             print(f"DEBUG ERROR: {error_msg}")
             self.show_error(error_msg)
             
@@ -1838,53 +1869,107 @@ class VideoView:
             self.update_status("Preparing download...")
             self.show_progress_container()
             self.update_progress(10)
-            
-            if not self.current_video_path:
-                self.update_status("Creating video first...")
-                await self.create_video()
-                if not self.current_video_path:
-                    raise ValueError("Video creation failed")
-            
+                
             # Get save location
             save_path = await self.get_save_location()
+            debugmsg = f"""
+                DEBUG:mobile/src/myapp/views/video_view.py perform_download called  
+                \n current_video_url={self.current_video_url}
+                current_video_path={self.current_video_path}
+                current_video_filename={self.current_video_filename}
+                save_path={save_path}
+            """
+            print(debugmsg)
             
             if not save_path:
                 self.update_status("Download cancelled")
                 self.hide_progress_container()
                 return
             
-            self.update_progress(30)
             self.update_status(f"Saving to: {os.path.basename(save_path)}")
+            self.update_progress(30)
             
-            # Show copying progress
-            self.update_progress(40)
+            # Ensure the destination directory exists
+            save_dir = os.path.dirname(save_path)
+            if save_dir and not os.path.exists(save_dir):
+                print(f"DEBUG:mobile/src/myapp/views/video_view.py save_video_file_by_path Creating directory: {save_dir}")
+                os.makedirs(save_dir, exist_ok=True)
             
-            # Save the actual video file
-            save_result = await self.save_video_file(save_path)
+            # Check if destination file already exists
+            if os.path.exists(save_path):
+                # Create a unique filename
+                base, ext = os.path.splitext(save_path)
+                counter = 1
+                while os.path.exists(f"{base}_{counter}{ext}"):
+                    counter += 1
+                save_path = f"{base}_{counter}{ext}"
+                print(f"DEBUG:mobile/src/myapp/views/video_view.py  File exists, using new name: {save_path}")
+
+            save_result = None
+            if USE_PATH_DOWNLOAD_CALL and not self.current_video_path:
+                #self.current_video_path = os.path.join(os.path.abspath(settings.VIDEO_OUTPUT_DIR), self.current_video_filename)
+                #self.current_video_path = Path(settings.VIDEO_OUTPUT_DIR).resolve() / self.current_video_filename
+                self.current_video_path = "C:/Users/javau/dev/projects/python/HomeTheaterLive/video_output/" + self.current_video_filename
+            
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py perform_download Copying video from path {self.current_video_path} or url {self.current_video_url} to {save_path}")
+            if USE_PATH_DOWNLOAD_CALL and self.current_video_path:
+                self.update_status(f"Saving from {self.current_video_path} to: {os.path.basename(save_path)}")
+                self.update_progress(50)
+                save_result = await self.save_video_file_by_path(save_path)
+            elif self.current_video_url: 
+                self.update_status(f"Saving from {self.current_video_url} to: {os.path.basename(save_path)}")
+                self.update_progress(50)
+                save_result = await self.save_video_file_by_url(save_path)
+            else:
+                self.update_status(f"Saving from {self.current_video_path} to: {os.path.basename(save_path)}")
+                self.update_progress(50)
+                save_result = await self.save_video_file_by_path(save_path)
             
             if not save_result.get('success', False):
-                raise RuntimeError(save_result.get('error', 'Unknown error during save'))
+                raise RuntimeError(save_result.get('error', 'mobile/src/myapp/views/video_view.py perform_download Unknown error during save'))
             
-            self.update_progress(90)
+            self.update_progress(70)
             self.update_status("Finalizing...")
             
             # Verify the file
             if not os.path.exists(save_path):
-                raise FileNotFoundError(f"Video was not saved to {save_path}")
+                raise FileNotFoundError(f"mobile/src/myapp/views/video_view.py perform_download Video was not saved to {save_path}")
             
             file_size = os.path.getsize(save_path)
             if file_size == 0:
-                raise ValueError("Saved video file is empty")
+                raise ValueError("mobile/src/myapp/views/video_view.py perform_download Saved video file is empty")
             
-            self.update_progress(100)
+            self.update_progress(90)
             self.update_status(f"Video saved! ({await self._format_bytes(file_size)})")
             
-            # Show success with file details
-            await self.show_download_success(save_path, save_result)
+            # Get video info for confirmation
+            video_info = self._get_video_file_info(save_path)
+            formatted_size = await self._format_bytes(file_size)
+            exists = os.path.exists(save_path)
+            readable = os.access(save_path, os.R_OK)
+            print(f"DEBUG:mobile/src/myapp/views/video_view.py  perform_download Video saved successfully: \n   - Path: {save_path}")
+            print(f"  - Size: {file_size} bytes (formatted_size)")
+            print(f"  - Exists: {exists}")
+            print(f"  - Readable: {readable}")
             
+            # Store the saved path for reference
+            self.last_saved_path = save_path
+            # Show success with file details
+            await self.show_download_success(save_path, save_result)            
             # Hide progress
             self.hide_progress_container()
+            self.update_progress(100)
+            self.update_status(f"Video saved and processed successfully! ({formatted_size})")
             
+            return {
+                'success': True,
+                'save_path': save_path,
+                'filename': os.path.basename(save_path),
+                'size': file_size,
+                'formatted_size': formatted_size,
+                'video_info': video_info
+            }
+                        
         except Exception as e:
             self.update_status(f"Error: {str(e)}")
             self.show_error(f"Download failed: {str(e)}")
@@ -1893,18 +1978,23 @@ class VideoView:
                 
     async def get_save_location(self):
         """Get location to save the video with user interaction"""
+        default_name = "video.mp4"   # ✅ ALWAYS defined        
+        
         try:
-            print(f"DEBUG: get_save_location self.current_video_filename: {self.current_video_filename}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py get_save_location self.current_video_filename: {self.current_video_filename}")
             # Generate default filename
-            if hasattr(self, 'current_video_filename') and self.current_video_filename:
+            if self.current_video_filename:
                 default_name = self.current_video_filename
-            else:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                default_name = f"video_{timestamp}.mp4"
-            
+            elif self.current_video_path:
+                default_name = self.current_video_path.split("/")[-1]            
+            elif self.current_video_url:
+                default_name = self.current_video_url.split("/")[-1]            
+
+            print(f"DEBUG:video-view.py get_save_location default_name={default_name}, self.current_video_path={self.current_video_path}, self.current_video_url={self.current_video_url}")
+
             # Try to use platform-specific save dialog
             save_path = await self._get_save_path_from_dialog(default_name)
-            print(f"DEBUG: get_save_location Using fallback save path: {save_path}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py get_save_location Using fallback save path: {save_path}")
             
             if save_path:
                 return save_path
@@ -1916,11 +2006,11 @@ class VideoView:
             # Ensure unique filename
             save_path = self._ensure_unique_filename(save_path)
             
-            print(f"DEBUG: get_save_location Using fallback save path: {save_path}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py get_save_location Using fallback save path: {save_path}")
             return save_path
             
         except Exception as e:
-            print(f"DEBUG: Error getting save location: {e}")
+            print(f"DEBUG: video_view.py default_name={default_name}: Error getting save location: {e}")
             # Ultimate fallback
             return os.path.join(os.getcwd(), default_name)
     
@@ -1939,7 +2029,7 @@ class VideoView:
                     )                                          
                     return save_path
         except Exception as e:
-            print(f"DEBUG: Save dialog failed: {e}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py Save dialog failed: {e}")
         
         return None
     
@@ -1955,74 +2045,87 @@ class VideoView:
             counter += 1
         
         return f"{base}_{counter}{ext}"            
-                    
-    async def save_video_file(self, save_path):
+                 
+    async def save_video_file_by_url(self, save_path):
+        try:
+            formatted_video_url = self.current_video_url.replace("/api/v1", "", 1)
+            video_url = f"{self.app.api_base_url}{formatted_video_url}"
+            print(f"DEBUG:video_view.py save_video_file_by_url Downloading from {video_url}")
+    
+            async with httpx.AsyncClient(timeout=None) as client:
+                async with client.stream("GET", video_url) as response:
+                    response.raise_for_status()
+    
+                    total = int(response.headers.get("Content-Length", 0))
+                    downloaded = 0
+    
+                    async with aiofiles.open(save_path, "wb") as f:
+                        async for chunk in response.aiter_bytes(chunk_size=1024 * 1024):
+                            await f.write(chunk)
+                            downloaded += len(chunk)
+    
+                            if total:
+                                percent = int(downloaded / total * 100)
+                                total_downloaded = (min(40 + percent // 2, 90))
+                                self.update_progress(total_downloaded)
+                                print(f"DEBUG:video_view.py save_video_file_by_url Downloading {total_downloaded} of {percent} from {total}")
+                                
+                                
+    
+            return {
+                "success": True,
+                "save_path": save_path,
+                "filename": os.path.basename(save_path),
+            }
+    
+        except Exception as e:
+            raise Exception(f"Failed to download video: {e}")
+            
+    async def save_video_file_by_path(self, save_path):
         """Copy the actual video file to the specified save location"""
         try:
-            print(f"DEBUG: save_video_file called with save_path={save_path}")
-            print(f"DEBUG: current_video_path={self.current_video_path}")
-            print(f"DEBUG: current_video_filename={self.current_video_filename}")
-            
-            if not self.current_video_path:
-                raise ValueError("No video has been created yet. Please create a video first.")
-            
-            # Check if source video exists
-            if not os.path.exists(self.current_video_path):
-                raise FileNotFoundError(f"Source video file not found: {self.current_video_path}")
+            debugmsg = f"""
+                DEBUG:mobile/src/myapp/views/video_view.py  save_video_file_by_path called with save_path={save_path}   
+                current_video_path={self.current_video_path}
+                current_video_filename={self.current_video_filename}
+            """
+            print(debugmsg)
             
             # Get source file info
             source_size = os.path.getsize(self.current_video_path)
-            print(f"DEBUG: Source video size: {source_size} bytes")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py Source video size: {source_size} bytes")
             
             if source_size == 0:
-                raise ValueError("Source video file is empty (0 bytes)")
+                raise ValueError("mobile/src/myapp/views/video_view.py Source video file is empty (0 bytes)")
             
-            # Ensure the destination directory exists
-            save_dir = os.path.dirname(save_path)
-            if save_dir and not os.path.exists(save_dir):
-                print(f"DEBUG: Creating directory: {save_dir}")
-                os.makedirs(save_dir, exist_ok=True)
-            
-            # Check if destination file already exists
-            if os.path.exists(save_path):
-                # Create a unique filename
-                base, ext = os.path.splitext(save_path)
-                counter = 1
-                while os.path.exists(f"{base}_{counter}{ext}"):
-                    counter += 1
-                save_path = f"{base}_{counter}{ext}"
-                print(f"DEBUG: File exists, using new name: {save_path}")
-            
-            # Copy the actual video file
-            print(f"DEBUG: Copying video from {self.current_video_path} to {save_path}")
             
             # Show copying progress
-            self.update_status("Copying video file...")
-            
+            self.update_status("Copying video file...")            
             # Use shutil.copy2 to preserve metadata
             # Method 1: Use shutil.copy2 (recommended for files)
             try:
+                print(f"DEBUG: mobile/src/myapp/views/video_view.py Copying from {self.current_video_path} video file size: {source_size} bytes")                
                 shutil.copy2(self.current_video_path, save_path)
-                print(f"DEBUG: Video copied successfully using shutil.copy2 to save_path={save_path}")
+                print(f"DEBUG:mobile/src/myapp/views/video_view.py Video copied successfully from {self.current_video_path} using shutil.copy2 to save_path={save_path}")
                 
             except Exception as copy_error:
-                print(f"DEBUG: shutil.copy2 failed: {copy_error} \n\n retry using _copy_file_with_progress")
-                
+                print(f"DEBUG:mobile/src/myapp/views/video_view.py  shutil.copy2 failed: {copy_error} \n\n retry using _copy_file_with_progress")
                 # Method 2: Manual copy with progress
                 await self._copy_file_with_progress(self.current_video_path, save_path)
             
+            """
             # Verify the copy was successful
             if not os.path.exists(save_path):
-                raise RuntimeError("Copy operation failed - destination file not created")
+                raise RuntimeError("mobile/src/myapp/views/video_view.py Copy operation failed - destination file not created")
             
             dest_size = os.path.getsize(save_path)
-            print(f"DEBUG: Destination video size: {dest_size} bytes")
+            print(f"DEBUG:mobile/src/myapp/views/video_view.py  Destination video size: {dest_size} bytes")
             
             if dest_size == 0:
-                raise RuntimeError("Destination video file is empty (0 bytes)")
+                raise RuntimeError("mobile/src/myapp/views/video_view.py Destination video file is empty (0 bytes)")
             
             if dest_size != source_size:
-                print(f"DEBUG: WARNING: Source size ({source_size}) != Destination size ({dest_size})")
+                print(f"DEBUG: WARNING:mobile/src/myapp/views/video_view.py  Source size ({source_size}) != Destination size ({dest_size})")
                 # Check if file is at least partially copied
                 if dest_size < source_size * 0.9:  # Less than 90% of source size
                     raise RuntimeError(f"Incomplete copy: {dest_size} bytes vs {source_size} bytes")
@@ -2030,25 +2133,23 @@ class VideoView:
             # Get video info for confirmation
             video_info = self._get_video_file_info(save_path)
             
-            print(f"DEBUG: Video saved successfully:   - Path: {save_path}")
+            print(f"DEBUG:mobile/src/myapp/views/video_view.py  Video saved successfully:   - Path: {save_path}")
             print(f"  - Size: {dest_size} bytes ({await self._format_bytes(dest_size)})")
             print(f"  - Exists: {os.path.exists(save_path)}")
             print(f"  - Readable: {os.access(save_path, os.R_OK)}")
             
             # Store the saved path for reference
             self.last_saved_path = save_path
+            """
             
             return {
                 'success': True,
                 'save_path': save_path,
-                'filename': os.path.basename(save_path),
-                'size': dest_size,
-                'formatted_size': await self._format_bytes(dest_size),
-                'video_info': video_info
+                'filename': os.path.basename(save_path)
             }
             
         except Exception as e:
-            error_msg = f"Failed to save video: {str(e)}"
+            error_msg = f"mobile/src/myapp/views/video_view.py Failed to save video: {str(e)}"
             print(f"DEBUG ERROR in save_video_file: {error_msg}")
             import traceback
             traceback.print_exc()
@@ -2057,7 +2158,7 @@ class VideoView:
             if 'save_path' in locals() and os.path.exists(save_path):
                 try:
                     os.remove(save_path)
-                    print(f"DEBUG: Cleaned up incomplete file: {save_path}")
+                    print(f"DEBUG: mobile/src/myapp/views/video_view.py Cleaned up incomplete file: {save_path}")
                 except:
                     pass
             
@@ -2066,12 +2167,12 @@ class VideoView:
     async def _copy_file_with_progress(self, source_path, dest_path):
         """Copy file manually with progress updates"""
         try:
-            print(f"DEBUG: Starting manual file copy: Source: {source_path}")
-            print(f"DEBUG: Destination: {dest_path}")
+            print(f"DEBUG: mobile/src/myapp/views/video_view.py _copy_file_with_progress Starting manual file copy: Source: {source_path}")
+            print(f"DEBUG:mobile/src/myapp/views/video_view.py _copy_file_with_progress  Destination: {dest_path}")
             
             # Get total size
             total_size = os.path.getsize(source_path)
-            print(f"DEBUG: Total size to copy: {total_size} bytes")
+            print(f"DEBUG:mobile/src/myapp/views/video_view.py _copy_file_with_progress  Total size to copy: {total_size} bytes")
             
             # Open source file for reading
             with open(source_path, 'rb') as src_file:
@@ -2093,15 +2194,15 @@ class VideoView:
                         
                         # Update progress (if we're in a progress context)
                         progress_percent = (copied / total_size) * 100
-                        print(f"DEBUG: Copy progress: {progress_percent:.1f}% ({await self._format_bytes(copied)}/{await self._format_bytes(total_size)})")
+                        print(f"DEBUG:mobile/src/myapp/views/video_view.py _copy_file_with_progress  Copy progress: {progress_percent:.1f}% ({await self._format_bytes(copied)}/{await self._format_bytes(total_size)})")
                         
                         # Small async yield to prevent blocking
                         await asyncio.sleep(0.001)
             
-            print(f"DEBUG: Manual copy completed successfully from source_path {source_path}, \n dest_path {dest_path}")
+            print(f"DEBUG:mobile/src/myapp/views/video_view.py _copy_file_with_progress  Manual copy completed successfully from source_path {source_path}, \n dest_path {dest_path}")
             
         except Exception as e:
-            print(f"DEBUG ERROR in _copy_file_with_progress: {e}")
+            print(f"DEBUG ERROR in mobile/src/myapp/views/video_view.py _copy_file_with_progress : {e}")
             raise
     
     
@@ -2265,7 +2366,7 @@ class VideoView:
             print("="*60 + "\n")
             
         except Exception as e:
-            print(f"DEBUG: Error showing success message: {e}")
+            print(f"DEBUG:mobile/src/myapp/views/video_view.py show_download_success  Error showing success message: {e}")
     
     def _play_success_sound(self):
         """Play a success sound if possible"""
@@ -2291,7 +2392,7 @@ class VideoView:
         try:
             # Generate default filename
             default_name = f"video_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
-            print(f"_get_save_location_from_user default_name: {default_name}")
+            print(f"mobile/src/myapp/views/video_view.py _get_save_location_from_user default_name: {default_name}")
             try:
                 import tkinter as tk
                 from tkinter import filedialog
@@ -2317,11 +2418,11 @@ class VideoView:
                     return file_path
 
             except ImportError:
-                print("tkinter not available, using fallback")
+                print("mobile/src/myapp/views/video_view.py _get_save_location_from_user tkinter not available, using fallback")
 
             # Fallback: Use default downloads folder
             downloads = self._get_windows_downloads_path()
-            print(f"_get_save_location_from_user downloads: {downloads}")
+            print(f"mobile/src/myapp/views/video_view.py _get_save_location_from_user _get_save_location_from_user downloads: {downloads}")
             return os.path.join(downloads, default_name)
 
         except Exception as e:
@@ -2334,7 +2435,7 @@ class VideoView:
         try:
             # Method 1: Using os.path.join with USERPROFILE
             user_profile = os.environ.get('USERPROFILE')
-            print(f"_get_windows_downloads_path Getting Downloads folder path for Windows user_profile={user_profile}")
+            print(f"mobile/src/myapp/views/video_view.py _get_windows_downloads_path Getting Downloads folder path for Windows user_profile={user_profile}")
             if user_profile:
                 downloads = os.path.join(user_profile, 'Downloads')
                 if os.path.exists(downloads):
@@ -2356,12 +2457,13 @@ class VideoView:
             return desktop
 
         except Exception as e:
-            print(f"Error getting downloads path: {e}")
+            print(f"mobile/src/myapp/views/video_view.py _get_windows_downloads_path Error getting downloads path: {e}")
             # Fallback to current directory
             return os.getcwd()
 
     def _update_progress(self, value):
         """Update progress display"""
+        print(f"mobile/src/myapp/views/video_view.py _update_progress value={value}")
         if self.progress_bar:
             self.progress_bar.value = value
 
@@ -2371,6 +2473,7 @@ class VideoView:
     async def _perform_actual_save(self, save_path):
         """Actually save the file"""
         try:
+            print(f"mobile/src/myapp/views/video_view.py _perform_actual_save save_path={save_path}")
             self.update_status("Saving video...")
             self.show_progress_container()
 
@@ -2388,19 +2491,19 @@ class VideoView:
 
             # In a real app, copy the actual video file
             # For simulation, create a test file
-            print(f"_perform_actual_save calling _create_test_video_file save_path={save_path}")            
+            print(f"mobile/src/myapp/views/video_view.py _perform_actual_save calling _create_test_video_file save_path={save_path}")            
             await self._create_test_video_file(save_path)
 
             # Show success message with actual path
-            print(f"_perform_actual_save calling _show_success_message save_path={save_path}")            
+            print(f"mobile/src/myapp/views/video_view.py _perform_actual_save calling _show_success_message save_path={save_path}")            
             await self._show_success_message(save_path)
 
             # Open the folder containing the file
-            print(f"_perform_actual_save calling _open_containing_folder save_path={save_path}")            
+            print(f"mobile/src/myapp/views/video_view.py _perform_actual_save calling _open_containing_folder save_path={save_path}")            
             await self._open_containing_folder(save_path)
 
         except Exception as e:
-            raise Exception(f"Save operation failed: {str(e)}")
+            raise Exception(f"mobile/src/myapp/views/video_view.py _perform_actual_save Save operation failed: {str(e)}")
 
     async def _create_test_video_file(self, filepath):
         """Create a test file to simulate video saving"""
@@ -2581,7 +2684,7 @@ class VideoView:
 
     def update_progress(self, value):
         """Update progress bar"""
-        print(f"DEBUG: update_progress assign self.progress_bar.value to value: {value}")
+        print(f"DEBUG:mobile/src/myapp/views/video_view.py update_progress assign self.progress_bar.value to value: {value}")
         self.progress_bar.value = value
         self.progress_label.text = f"{int(value)}%"
 
@@ -2628,27 +2731,27 @@ class VideoView:
         """Update status message"""
         """Update status message with null check"""
         if self.status_label:
-            print(f"DEBUG: assign self.status_label.text = message: {message}")
+            print(f"DEBUG:mobile/src/myapp/views/video_view.py update_status assign self.status_label.text = message: {message}")
             self.status_label.text = message
         else:
             print(f"DEBUG: Status update (label not ready): {message}")
 
     def show_error(self, message):
         print(f"ERROR: {message}")
-        self.update_status(f"Error: {message}")
+        self.update_status(f"Error: mobile/src/myapp/views/video_view.py show_error {message}")
         
         try:
             if self.app and self.app.main_window:
-                print(f"DEBUG: show_error self.app.main_window={self.app.main_window}")
+                print(f"DEBUG:mobile/src/myapp/views/video_view.py show_error self.app.main_window={self.app.main_window}")
                 asyncio.create_task(self.show_error_dialog(message))
                 """
                 video_view.py:2097: DeprecationWarning: App.add_background_task is deprecated. 
                 Use asyncio.create_task(), or set an App.on_running() handler self.app.add_background_task(
                 """
             else:
-                print(f"DEBUG: Cannot show error dialog - self.app.main_window not available. message={message}")
+                print(f"DEBUG:mobile/src/myapp/views/video_view.py Cannot show error dialog - self.app.main_window not available. message={message}")
         except Exception as e:
-            print(f"Cannot show error dialog: {message}, exception: {e}")
+            print(f"mobile/src/myapp/views/video_view.py Cannot show error dialog: {message}, exception: {e}")
             
             
     async def show_error_dialog(self, message):

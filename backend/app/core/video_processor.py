@@ -17,7 +17,7 @@ print(">>> importing backend/app/core/video_processor.py done")
 
 class VideoProcessor:
     def __init__(self, output_dir: str = "processed_videos"):
-        print(">>> initializing VideoProcessor")
+        print(">>>backend/app/core/video_processor.py  initializing VideoProcessor")
         self.output_dir = output_dir
         # ⚠️ DO NOT run ffmpeg, scan dirs, or heavy work here
         # just cheap setup
@@ -40,7 +40,7 @@ class VideoProcessor:
         quality: str = "high"
     ) -> Dict:
         """Create H.264 video from images asynchronously"""
-        print(f"VideoProcessor create_video_from_images image_paths={len(image_paths)}")
+        print(f"backend/app/core/video_processor.py create_video_from_images image_paths={len(image_paths)}")
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             self.executor,
@@ -121,11 +121,11 @@ class VideoProcessor:
             
             video_size = os.path.getsize(video_path)
             if video_size == 0:
-                raise ValueError("Video file is empty")
+                raise ValueError("VideoProcessor _create_video_sync Video file is empty")
             
             # Get video info
             video_info = self._get_video_info(video_path)
-            print(f"VideoProcessor _create_video_sync video_info={video_info}, \n\n now return success with output_filename={output_filename}")
+            print(f"VideoProcessor _create_video_sync video_info={video_info}, \n now return success with output_filename={output_filename}")
 
             return {
                 "success": True,
@@ -139,7 +139,7 @@ class VideoProcessor:
             }
             
         except Exception as e:
-            logger.error(f"Error creating video: {e}", exc_info=True)
+            logger.error(f"Error VideoProcessor _create_video_sync creating video: {e}", exc_info=True)
             return {
                 "success": False,
                 "error": str(e),
@@ -180,7 +180,7 @@ class VideoProcessor:
         import cv2
         first_image = cv2.imread(image_paths[0])
         if first_image is None:
-            raise ValueError(f"Could not read first image: {image_paths[0]}")
+            raise ValueError(f"VideoProcessor _create_video_opencv Could not read first image: {image_paths[0]}")
         
         # Set resolution
         if resolution:
@@ -225,7 +225,7 @@ class VideoProcessor:
         
         print(f"VideoProcessor _create_video_opencv codec_used={codec_used}, video_writer={video_writer}")
         if not video_writer or not video_writer.isOpened():
-            raise ValueError("Could not create video writer with any codec")
+            raise ValueError("VideoProcessor _create_video_opencv Could not create video writer with any codec")
         
         try:
             frames_per_image = int(duration_per_image * fps)
@@ -262,7 +262,7 @@ class VideoProcessor:
                             )
             
             video_writer.release()
-            logger.info(f"Video created with OpenCV using {codec_used}: {video_path}")
+            logger.info(f"VideoProcessor _create_video_opencv created with OpenCV using {codec_used}: {video_path}")
             
             # If not using H.264 codec, convert to H.264 using FFmpeg
             if codec_used != "H264" and codec_used != "X264":
@@ -357,7 +357,7 @@ class VideoProcessor:
                         
             frame_count = global_frame_idx
             total_duration = frame_count / fps
-            print(f"_create_with_ffmpeg settings fps={fps}, frame_count={frame_count}, total_duration={total_duration}")
+            print(f"VideoProcessor _create_video_ffmpeg settings fps={fps}, frame_count={frame_count}, total_duration={total_duration}")
             #"""
             
             # Create FFmpeg command for H.264 encoding
@@ -391,7 +391,8 @@ class VideoProcessor:
                 raise RuntimeError(f"FFmpeg failed: {result.stderr}")
             
             logger.info(f"Video created with FFmpeg: {video_path}")
-            print(f"VideoProcessor _create_video_ffmpeg Video created with FFmpeg: {video_path}, \n\n finally return for success")
+            print(f"VideoProcessor _create_video_ffmpeg return for success Video created with FFmpeg: \n video_path={video_path}")
+            # C:\Users\javau\dev\projects\python\HomeTheaterLive\backend\..\video_output\video_20260204_170404.mp4
             return video_path
             
         finally:

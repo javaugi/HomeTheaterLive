@@ -1,12 +1,18 @@
-from sqlmodel import Session, create_engine, select
+# backend/app/core/db.py
+print(">>> importing #backend/app/core/db.py")
 
+from sqlmodel import Session, create_engine, select
 from app import crud
 from app.core.config import settings
 from app.models import User, UserCreate
+from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
+print(">>> importing #backend/app/core/db.py done")
+
+load_dotenv()
 
 engine = create_engine(str(settings.SQLALCHEMY_DATABASE_URI))
-
-
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 # make sure all SQLModel models are imported (app.models) before initializing DB
 # otherwise, SQLModel might fail to initialize relationships properly
 # for more details: https://github.com/fastapi/full-stack-fastapi-template/issues/28
@@ -31,3 +37,11 @@ def init_db(session: Session) -> None:
             is_superuser=True,
         )
         user = crud.create_user(session=session, user_create=user_in)
+
+# Dependency to get DB session
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

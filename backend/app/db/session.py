@@ -1,7 +1,9 @@
+print(">>> importing #backend/app/db/session.py")
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.core.config import settings
 from sqlalchemy.ext.declarative import declarative_base
+print(">>> importing #backend/app/db/session.py done")
 
 # DATABASE_URL = "sqlite:///./app.db"
 #DATABASE_URL = (

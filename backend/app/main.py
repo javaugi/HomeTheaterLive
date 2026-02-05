@@ -20,6 +20,8 @@ async def lifespan(app: FastAPI):
     print(f"DEBUG: Looking for STATIC_DIR  directory at: {os.path.abspath(settings.STATIC_DIR)}")    
     print(f"DEBUG: Looking for UPLOAD_DIRs directory at: {os.path.abspath(settings.UPLOAD_DIR)}")   
     print(f"DEBUG: Looking for env_file location: {os.path.abspath(settings.ENV_FILE_LOC)}")
+    print(f"DEBUG: Looking for PROJ_DIR location: {os.path.abspath(settings.PROJ_DIR)}")
+    print(f"DEBUG: Looking for settings.VIDEO_OUTPUT_DIR location: {os.path.abspath(settings.VIDEO_OUTPUT_DIR)}")
     #print(f"DEBUG: Looking for all settings: {settings.model_dump()}")   
     
     # Create database tables during startup (not at import time)
@@ -69,13 +71,17 @@ if settings.all_cors_origins:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["*"],
+        #expose_headers=["Authorization"]  # Important!        
     )
 
 # Mount static files directory
 app.mount("/static", StaticFiles(directory=settings.STATIC_DIR), name="static")
+app.mount("/api/v1/videos", StaticFiles(directory=settings.VIDEO_OUTPUT_DIR), name="videos")
 
 @app.middleware("http")
 async def log_auth(request: Request, call_next):
-    auth = request.headers.get("authorization")
-    print("backend/app/main.py log_auth AUTH HEADER:", auth)
+    auth = request.headers.get("authorization") or request.headers.get("Authorization") \
+            or request.headers.get("AUTHORIZATION")
+    print(f"\nExtracted auth header: {auth}, Request URL: {request.url}, Request method: {request.method}", "\n ALL HEADERS:", dict(request.headers))
     return await call_next(request)

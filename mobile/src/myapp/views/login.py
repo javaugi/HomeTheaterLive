@@ -43,7 +43,7 @@ class LoginView(toga.Box):
         result = await self.api_client.login(username, password)
         
         if result.get("success"):
-            print("frontend/src/myapp/views/login.py Login successful, switching to HomeView mobile/src/myapp/home_view.py")
+            print("mobile/src/myapp/views/login.py Login successful, switching to HomeView mobile/src/myapp/home_view.py")
             # Switch to HomeView
             self.app.main_window.content = self.home_view
             #from .. import views

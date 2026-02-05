@@ -8,7 +8,6 @@ from .storage import SecureStorage
 from .views.login import LoginView
 print(">>> importing mobile/src/myapp/home.py done")
 
-
 class Home(toga.Box):
 
     def __init__(self, app):

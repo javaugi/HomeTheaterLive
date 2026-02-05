@@ -39,7 +39,6 @@ class APIClient:
         self.session: Optional[aiohttp.ClientSession] = None
         #self.session.timeout = 30
         self.is_closed = False
-        self.access_token = None        
         print(f"mobile/src/myapp/api.py APIClient init self.access_token= {self.access_token}")
                     
     async def ensure_session(self):
@@ -61,8 +60,8 @@ class APIClient:
                 self.session = aiohttp.ClientSession(
                     timeout=timeout,
                     headers={
-                        'User-Agent': 'Image2Video-Mobile/1.0',
-                        'Accept': 'application/json'
+                        "Authorization": f"Bearer {self.storage.access_token()}",
+                        'User-Agent': 'Image2Video-Mobile/1.0'
                     }
                 )
                 self.is_closed = False
@@ -110,12 +109,12 @@ class APIClient:
                 "client_id": "",
                 "client_secret": ""                    
             }
-        headers={
+        headers = {
+            'User-Agent': 'Image2Video-Mobile/1.0',
             "Content-Type": "application/x-www-form-urlencoded"
         }
 
         print(f"mobile/src/myapp/api.py Attempting login to: {url}, Data: {data}, Headers: {headers}")
-        
         try:
             r = await self.client.post(url, data=data, headers=headers)
             # Debug: Print response details
@@ -202,17 +201,19 @@ class APIClient:
 
     async def get_user_profile(self):
         """Get user profile info"""
-        print(f"mobile/src/myapp/api.py APIClient get_user_profile self.access_token= {self.access_token}")
+        print(f"mobile/src/myapp/api.py APIClient get_user_profile self.access_token= {self.storage.access_token()}")
         if not self.access_token:
             return None
             
         try:
             response = await self.client.get(
                 f"{self.base_url}/users/me",
-                headers={"Authorization": f"Bearer {self.access_token}"}
+                headers={"Authorization": f"Bearer {self.storage.access_token()}"}
             )
             if response.status_code == 200:
-                return response.json()
+                data = await response.json()
+                print("DEBUG api.py get_user_profile response.json data:", data)
+                return data
         except Exception as e:
             print(f"Error getting user profile: {e}")
         return None
@@ -220,10 +221,10 @@ class APIClient:
     async def get_continue_watching(self):
         """Get continue watching items"""
         try:
-            print(f"mobile/src/myapp/api.py api get_continue_watching Bearer {self.access_token} ")
+            print(f"mobile/src/myapp/api.py api get_continue_watching Bearer {self.storage.access_token()} ")
             response = await self.client.get(
                 f"{self.base_url}/watch/continue",
-                headers={"Authorization": f"Bearer {self.access_token}"}
+                headers={"Authorization": f"Bearer {self.storage.access_token()}"}
             )
             print(f"mobile/src/myapp/api.py api get_continue_watching response.status_code={response.status_code} ")
             if response.status_code == 200:
@@ -235,15 +236,17 @@ class APIClient:
     async def get_recommendations(self, limit=10):
         """Get content recommendations"""
         try:
-            print(f"mobile/src/myapp/api.py api get_recommendations Bearer {self.access_token} ")
+            print(f"mobile/src/myapp/api.py api get_recommendations Bearer {self.storage.access_token()} ")
             response = await self.client.get(
                 f"{self.base_url}/recommendations/",
                 params={"limit": limit},
-                headers={"Authorization": f"Bearer {self.access_token}"}
+                headers={"Authorization": f"Bearer {self.storage.access_token()}"}
             )
             print(f"mobile/src/myapp/api.py api get_recommendations response.status_code={response.status_code} ")
             if response.status_code == 200:
-                return response.json()
+                data = await response.json()
+                print("DEBUG api.py get_recommendations response.json data:", data)
+                return data
         except Exception as e:
             print(f"Error getting recommendations: {e}")
         return []
@@ -252,14 +255,16 @@ class APIClient:
     async def search_content(self, query, limit=20):
         """Search for content"""
         try:
-            print(f"mobile/src/myapp/api.py api search_content Bearer {self.access_token} ")
+            print(f"mobile/src/myapp/api.py api search_content Bearer {self.storage.access_token()} ")
             response = await self.client.get(
                 f"{self.base_url}/search",
                 params={"q": query, "limit": limit},
-                headers={"Authorization": f"Bearer {self.access_token}"}
+                headers={"Authorization": f"Bearer {self.storage.access_token()}"}
             )
             if response.status_code == 200:
-                return response.json()
+                data = await response.json()
+                print("DEBUG api.py search_content response.json data:", data)
+                return data
         except Exception as e:
             print(f"Error searching: {e}")
         return []
@@ -293,7 +298,9 @@ class APIClient:
                 file_obj.close()
 
             if response.status_code == 200:
-                return response.json()
+                data = await response.json()
+                print("DEBUG api.py upload_images response.json data:", data)
+                return data
             else:
                 return {'error': f"Server error: {response.status_code}", 'details': response.text}
 
@@ -303,13 +310,20 @@ class APIClient:
     async def get_status(self, job_id: str) -> Dict:
         """Get processing status for a job"""
         try:
+            headers = {
+                "Authorization": f"Bearer {self.storage.access_token()}",
+                "User-Agent": "VideoView-Mobile/1.0"
+            }
+            
             response = await asyncio.get_event_loop().run_in_executor(
                 None,
-                lambda: self.session.get(f"{self.base_url}/status/{job_id}")
+                lambda: self.session.get(f"{self.base_url}/status/{job_id}", headers=headers)
             )
 
             if response.status_code == 200:
-                return response.json()
+                data = await response.json()
+                print("DEBUG api.py get_status job_id={job_id} response.json data:", data)
+                return data
             else:
                 return {'error': f"Server error: {response.status_code}"}
 
@@ -319,13 +333,19 @@ class APIClient:
     async def list_videos(self) -> List[Dict]:
         """Get list of available videos"""
         try:
+            headers = {
+                "Authorization": f"Bearer {self.storage.access_token()}",
+                "User-Agent": "VideoView-Mobile/1.0"
+            }
+            
             response = await asyncio.get_event_loop().run_in_executor(
                 None,
-                lambda: self.session.get(f"{self.base_url}/videos")
+                lambda: self.session.get(f"{self.base_url}/videos", headers=headers)
             )
 
             if response.status_code == 200:
-                data = response.json()
+                data = await response.json()
+                print("DEBUG api.py list_videos response.json data:", data)
                 return data.get('videos', [])
             else:
                 return []
@@ -400,10 +420,18 @@ class APIClient:
             # Send request
             url = f"{self.base_url}/videos/create"
             print(f"DEBUG: POST to {url}")
-            async with self.session.post(url, data=form_data) as response:
+            headers = {
+                "Authorization": f"Bearer {self.storage.access_token()}",
+                "User-Agent": "VideoView-Mobile/1.0"
+            }
+            
+            async with self.session.post(url, headers=headers, data=form_data) as response:
+            #async with self.session.post(url, data=form_data) as response:
                 print(f"DEBUG: response.status from POST {response.status}")
                 if response.status == 200:
-                    return await response.json()
+                    data = await response.json()
+                    print("DEBUG api.py create_video response.json data:", data)
+                    return data
                 else:
                     error_text = await response.text()
                     return {
@@ -449,13 +477,16 @@ class APIClient:
         try:
             url = f"{self.base_url}/videos/{job_id}/status"
             print(f"DEBUG: GET {url}")
-            
-            async with self.session.get(url) as response:
+            headers = {
+                "Authorization": f"Bearer {self.storage.access_token()}",
+                "User-Agent": "VideoView-Mobile/1.0"
+            }
+                        
+            async with self.session.get(url, headers=headers) as response:
                 print(f"mobile/src/myapp/api.py get_video_status job_id={job_id} response.status={response.status}")
                 if response.status == 200:
-                    print("DEBUG response.json type:", type(response.json))
                     data = await response.json()
-                    print("DEBUG response.json data:", data)
+                    print("DEBUG api.py get_video_status response.json data:", data)
                     return data
                 return {
                     'success': False,
@@ -485,8 +516,12 @@ class APIClient:
             
             url = f"{self.base_url}/videos/download/{filename}"
             print(f"DEBUG: Downloading from {url} to {save_path}")
+            headers = {
+                "Authorization": f"Bearer {self.storage.access_token()}",
+                "User-Agent": "VideoView-Mobile/1.0"
+            }
             
-            async with self.session.get(url) as response:
+            async with self.session.get(url, headers=headers) as response:
                 print(f"mobile/src/myapp/api.py download_video return status={response.status}")
                 if response.status == 200:
                     # Ensure directory exists
@@ -575,7 +610,7 @@ class APIClient:
         timeout: float = 600.0,
         max_attempts: int = 300
     ) -> Dict[str, Any]:
-        print("Poll for job completion with callback support")
+        print("mobile/src/myapp/api.py Poll for job completion with callback support")
         start_time = asyncio.get_event_loop().time()
         
         while True:
@@ -590,7 +625,7 @@ class APIClient:
             
             # Get status
             status_data = await self.get_video_status(job_id)
-            print("Looping Poll for job completion status_data={status_data}")
+            print(f"mobile/src/myapp/api.py Looping Poll for job completion status_data={status_data}")
             
             if not status_data.get('success', True):
                 return status_data
@@ -598,16 +633,18 @@ class APIClient:
             current_status = status_data.get('status')
             progress = status_data.get('progress', 0)
             message = status_data.get('message', '')
-            print("Looping Poll for job completion current_status={current_status}, progress={progress}")
+            print(f"mobile/src/myapp/api.py Looping Poll for job completion current_status={current_status}, progress={progress}")
                         
             # Call progress callback if provided
-            print("Looping Poll for job completion on_progress={on_progress}")
+            print(f"mobile/src/myapp/api.py Looping Poll for job completion on_progress={on_progress}")
             if on_progress:
                 #await on_progress(progress, message, current_status)
                 on_progress(progress, message, current_status)
             
             # Check if processing is complete
+            print(f"mobile/src/myapp/api.py Looping Poll poll_status done status_data={status_data}")
             if current_status == 'completed':
+                status_data['success'] = True
                 return status_data
             elif current_status == 'failed':
                 return {
@@ -627,9 +664,9 @@ class APIClient:
             if self.session and not self.session.closed:
                 await self.session.close()
                 self.is_closed = True
-                print("DEBUG: Session closed")
+                print("DEBUG:mobile/src/myapp/api.py close Session closed")
         except Exception as e:
-            print(f"DEBUG: Error closing session: {e}")
+            print(f"DEBUG:mobile/src/myapp/api.py close Error closing session: {e}")
             
 """
 ✅ Correct Way (FastAPI + Mobile)

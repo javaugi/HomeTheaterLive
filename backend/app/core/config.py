@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     # SECRET_KEY: str = "your-secret-key-here-change-in-production"
     # ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8  # 8 days
     #file upload
+    PROJ_DIR: ClassVar[Path] = Path(__file__).resolve().parent.parent.parent.parent
+    #VIDEO_OUTPUT_DIR: str = PROJ_DIR / "video_output"
+    VIDEO_OUTPUT_DIR: str = "../video_output"
     
     # This gets the directory where main.py (or config.py) lives
     BASE_DIR: ClassVar[Path] = Path(__file__).resolve().parent.parent
