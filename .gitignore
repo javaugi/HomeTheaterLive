@@ -1,3 +1,3 @@
 video_output/
-#backend/temp_uploads/
+backend/temp_uploads/
 .env
