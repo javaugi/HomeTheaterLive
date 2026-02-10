@@ -1,4 +1,5 @@
 #!/bin/sh
+clear
 pip install -r requirements.txt
 uv sync
 # pip install "fastapi[standard]"

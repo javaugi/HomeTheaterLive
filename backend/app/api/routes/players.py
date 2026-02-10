@@ -15,7 +15,7 @@ print(">>> importing backend/app/api/routes/players.py done")
 
 @router.get("/", response_model=list[Item])
 def get_players(
-    current_user: CurrentUser, 
+    current_user: CurrentUser,
     session: SessionDep,
     limit: int = 10
 ) -> Any:

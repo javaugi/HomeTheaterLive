@@ -2,4 +2,4 @@
 reset
 ./install_venv
 ./install_all
-./rundev
+./run_bc_dev

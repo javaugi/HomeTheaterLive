@@ -4,6 +4,7 @@ from typing import Any
 import jwt, uuid
 from passlib.context import CryptContext
 import bcrypt
+
 from app.core.config import settings
 print(">>> importing backend/app/core/security.py done")
 
@@ -31,13 +32,13 @@ def hash_password(password: str) -> str:
         # Option 2: Hash first with SHA256 (more secure)
         # import hashlib
         # password = hashlib.sha256(password.encode()).hexdigest()[:72]
-    
+
     # Use bcrypt directly
     hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
     return hashed.decode('utf-8')
 
 def create_access_token(subject: str | Any, minutes: int):
-    expire = datetime.now() + timedelta(minutes=minutes)    
+    expire = datetime.now() + timedelta(minutes=minutes)
     payload = {
         "sub": subject,
         "exp": expire,

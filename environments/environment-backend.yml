@@ -1,0 +1,23 @@
+name: htl-backend
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - python=3.11
+  - pip
+  - fastapi
+  - uvicorn
+  - sqlalchemy
+  - pillow
+  - numpy
+  - opencv
+  - ffmpeg
+  - requests
+  - python-dotenv
+  - ipython
+  - spyder
+
+  - pip:
+      - python-multipart
+      - aiofiles

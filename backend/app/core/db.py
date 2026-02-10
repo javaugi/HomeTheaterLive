@@ -1,12 +1,13 @@
 # backend/app/core/db.py
 print(">>> importing #backend/app/core/db.py")
-
 from sqlmodel import Session, create_engine, select
+from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv
+
 from app import crud
 from app.core.config import settings
 from app.models import User, UserCreate
-from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
+
 print(">>> importing #backend/app/core/db.py done")
 
 load_dotenv()

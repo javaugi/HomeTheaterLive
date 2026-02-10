@@ -1,8 +1,9 @@
 print(">>> importing #backend/app/db/session.py")
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from app.core.config import settings
 from sqlalchemy.ext.declarative import declarative_base
+
+from ..core.config import settings
 print(">>> importing #backend/app/db/session.py done")
 
 # DATABASE_URL = "sqlite:///./app.db"
@@ -28,5 +29,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close()  
-        
+        db.close()

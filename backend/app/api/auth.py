@@ -4,6 +4,7 @@ import jwt
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+
 from app.db.session import SessionLocal
 from app.model.user import User
 from app.core.security import (
@@ -46,7 +47,7 @@ def login(
     user = db.query(User).filter(User.username == form.username).first()
     if not user or not verify_password(form.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
-        
+
     access = create_access_token(form.username, 15)
     refresh = create_access_token(form.username,43200)
     return {

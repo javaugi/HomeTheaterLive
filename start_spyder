@@ -1,0 +1,4 @@
+#!/bin/sh
+#PATH="/c/Windows/system32:/c/Windows:/c/ProgramData/spyder-6/envs/spyder-runtime/Scripts" /c/ProgramData/spyder-6/envs/spyder-runtime/Scripts/spyder.exe
+alias spyder='PATH="/c/ProgramData/anaconda3/Scripts:$PATH" spyder.exe &'
+spyder

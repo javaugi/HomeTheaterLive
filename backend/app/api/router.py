@@ -1,5 +1,6 @@
 # backend/app/api/router.py
 from fastapi import APIRouter
+
 from app.core.config import settings
 from app.api import auth, main, endpoints
 from app.api.routes import watch, recommendations

@@ -1,5 +1,5 @@
 #!/bin/sh
-reset
+clear
 pip install -r requirements.txt
 pip install --upgrade passlib[bcrypt]
 pip install "psycopg[binary]"

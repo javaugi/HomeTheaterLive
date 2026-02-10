@@ -3,7 +3,7 @@ from typing import Annotated, Any, List, Self
 from pathlib import Path
 import sys
 
-from pydantic import PostgresDsn, computed_field, BeforeValidator, HttpUrl, EmailStr, model_validator
+from pydantic import PostgresDsn, computed_field, BeforeValidator, EmailStr, model_validator
 from pydantic_settings import SettingsConfigDict
 
 # Add project root to path before shared.config import
@@ -23,11 +23,11 @@ def parse_cors(v: Any) -> list[str] | str:
 
 
 class BackendSettings(BaseSettingsConfig):
-    """Backend-specific settings"""
-    
+    """Backend-specific settings"""    
     model_config = SettingsConfigDict(
-        env_file="../.env",
+        env_file="../../.env.backend",  # Specific env file
         env_ignore_empty=True,
+        env_file_encoding="utf-8",
         extra="ignore",
         env_prefix="BACKEND_",  # Optional: prefix for backend-specific env vars
     )
@@ -53,7 +53,7 @@ class BackendSettings(BaseSettingsConfig):
     OUTPUT_FORMAT: str = "mp4"
     
     # CORS
-    FRONTEND_HOST: str = "http://127.0.0.1:5173"
+    FRONTEND_HOST: str = "http://localhost:5173"
     BACKEND_CORS_ORIGINS: Annotated[
         list[str] | str, BeforeValidator(parse_cors)
     ] = []

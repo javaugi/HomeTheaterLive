@@ -1,4 +1,5 @@
 aiofiles
+aiosqlite
 alembic
 anyio
 bcrypt
@@ -14,6 +15,7 @@ pillow
 psycopg
 psycopg2-binary
 pydantic
+pydantic[email]
 PyJWT[crypto]
 pytest-asyncio
 pytest-tornasync
@@ -23,6 +25,7 @@ python-jose
 python-magic
 python-multipart
 redis
+sentry-sdk
 sqlalchemy
 sqlmodel
 starlette

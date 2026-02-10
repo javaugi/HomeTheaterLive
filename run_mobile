@@ -1,0 +1,4 @@
+#!/bin/sh
+clear
+cd mobile
+python run_mobile.py

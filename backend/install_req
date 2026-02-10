@@ -1,4 +1,3 @@
 #!/bin/sh
-reset
+clear
 pip install -r requirements.txt
-

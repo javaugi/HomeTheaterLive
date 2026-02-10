@@ -1,0 +1,14 @@
+name: htl-mobile
+channels:
+  - conda-forge
+
+dependencies:
+  - python=3.10
+  - pip
+  - pillow
+  - numpy
+  - requests
+
+  - pip:
+      - toga
+      - briefcase

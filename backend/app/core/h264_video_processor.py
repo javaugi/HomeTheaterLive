@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import os
-import glob
 from typing import List, Optional, Tuple, Dict
 from PIL import Image
 import asyncio

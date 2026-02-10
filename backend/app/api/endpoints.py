@@ -20,6 +20,7 @@ from app.model.schemas import (
 from fastapi import Depends
 from typing import Dict, Any
 from sqlalchemy.orm import Session
+
 from app.core.db import get_db
 from app.model.schemas import ProcessingStatusCreate, ProcessingStatusResponse, ProcessingStatusUpdate
 from app.crud.processing_status import ProcessingStatusCRUD
@@ -50,7 +51,7 @@ async def process_directory(
 
         # Store initial status
         processing_status[job_id] = {
-            "job_id": job_id,  # Add this line            
+            "job_id": job_id,  # Add this line
             "status": "processing",
             "progress": 0,
             "message": "Starting video creation...",
@@ -62,13 +63,13 @@ async def process_directory(
         FastAPI BackgroundTasks expects sync functions, not async.
         background_tasks.add_task(process_video_task, ...)
         but async def process_video_task(...) - is async
-        
+
         ✅ Fix: wrap async task
         import asyncio
 
         def run_async(coro):
         asyncio.create_task(coro)
-        
+
         background_tasks.add_task(
             run_async,
             process_video_task(job_id, path, settings)
@@ -83,7 +84,7 @@ async def process_directory(
         background_tasks.add_task(
             run_async,
             process_video_task(job_id, request.directory_path, request.video_settings)
-        )        
+        )
 
         return VideoResponse(
             job_id=job_id,
@@ -122,8 +123,8 @@ async def process_uploaded_images(
 
         # Save uploaded files
         saved_paths = []
-        
-        
+
+
         from app.utils.file_utils import save_upload_file
         for i, file in enumerate(files):
             file_path = await save_upload_file(file, temp_dir)
@@ -192,7 +193,7 @@ async def get_video_file(filename: str):
 async def list_videos():
     """List all available videos"""
     videos = []
-    
+
     from app.core.video_processor import get_video_processor
     for filename in os.listdir(get_video_processor().output_dir):
         if filename.endswith('.mp4'):
@@ -252,7 +253,7 @@ async def process_video_task(job_id: str, directory_path: str, settings: VideoSe
             output_filename=output_filename,
             transition_type=settings.transition_type,
             duration_per_image=settings.duration_per_image
-        )        
+        )
         print(f"backend/app/api/endpoints.py process_video_task 2 video_path={video_path}")
 
         # Update status
@@ -305,7 +306,7 @@ async def process_upload_task(job_id: str, image_paths: List[str], settings: Vid
         # Cleanup on error too
         from app.utils.file_utils import cleanup_temp_directory
         cleanup_temp_directory(temp_dir)
-        
+
 @router.post("/videos/create", response_model=VideoResponse)
 async def create_video(
     files: List[UploadFile] = File(...),
@@ -318,15 +319,15 @@ async def create_video(
     background_tasks: BackgroundTasks = None
 ):
     """API endpoint to create video from uploaded images"""
-    print(f"backend/app/api/endpoints.py /videos/create fps={fps}, files={len(files)}")      
+    print(f"backend/app/api/endpoints.py /videos/create fps={fps}, files={len(files)}")
     try:
         # Create job ID
         job_id = str(uuid.uuid4())
-        
+
         # Create temp directory for uploaded files
         temp_dir = os.path.join("temp_uploads", job_id)
         os.makedirs(temp_dir, exist_ok=True)
-        
+
         # Save uploaded files
         saved_paths = []
         for file in files:
@@ -335,17 +336,17 @@ async def create_video(
                 content = await file.read()
                 buffer.write(content)
             saved_paths.append(file_path)
-        
+
         # Store job info
         processing_status[job_id] = {
-            "job_id": job_id,  # Add this line            
+            "job_id": job_id,  # Add this line
             "status": "processing",
             "progress": 0,
             "message": "Uploading images...",
             "created_at": datetime.now().isoformat()
         }
-        
-        print(f"backend/app/api/endpoints.py /videos/create job_id={job_id}, saved_paths={len(saved_paths)}")      
+
+        print(f"backend/app/api/endpoints.py /videos/create job_id={job_id}, saved_paths={len(saved_paths)}")
         # Process in background
         background_tasks.add_task(
             process_video_background,
@@ -358,16 +359,16 @@ async def create_video(
             quality,
             temp_dir
         )
-        
+
         return VideoResponse(
             job_id=job_id,
             status="processing",
             message="Video creation started",
             video_url=None
         )
-        
+
     except Exception as e:
-        print(f"backend/app/api/endpoints.py /videos/create status_code=500 exception={str(e)}")      
+        print(f"backend/app/api/endpoints.py /videos/create status_code=500 exception={str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 async def process_video_background(
@@ -381,13 +382,13 @@ async def process_video_background(
     temp_dir: str
 ):
     """Background task to process video"""
-    print(f"backend/app/api/endpoints.py process_video_background job_id={job_id}, fps={fps}, image_paths={len(image_paths)}")      
+    print(f"backend/app/api/endpoints.py process_video_background job_id={job_id}, fps={fps}, image_paths={len(image_paths)}")
     try:
         # Update status
         processing_status[job_id]["job_id"] = job_id
         processing_status[job_id]["progress"] = 10
         processing_status[job_id]["message"] = "Processing images..."
-        
+
         # Call the video processor
         from app.core.video_processor import get_video_processor
         result = await get_video_processor().create_video_from_images(
@@ -398,12 +399,12 @@ async def process_video_background(
             duration_per_image=duration_per_image,
             quality=quality
         )
-        print(f"backend/app/api/endpoints.py process_video_background result={result}")      
-        print(f"backend/app/api/endpoints.py video_url=/api/v1/videos/{os.path.basename(result['video_path'])}")   
-        
+        print(f"backend/app/api/endpoints.py process_video_background result={result}")
+        print(f"backend/app/api/endpoints.py video_url=/api/v1/videos/{os.path.basename(result['video_path'])}")
+
         print(f"\n Video exists: {os.path.exists(result['video_path'])}")
         print(f"Filename: {os.path.basename(result['video_path'])}")
-        
+
         if result["success"]:
             # Update status
             processing_status[job_id]["status"] = "completed"
@@ -416,9 +417,9 @@ async def process_video_background(
         else:
             processing_status[job_id]["status"] = "failed"
             processing_status[job_id]["message"] = result.get("error", "Unknown error")
-            
+
     except Exception as e:
-        print(f"backend/app/api/endpoints.py process_video_background exception={str(e)}")      
+        print(f"backend/app/api/endpoints.py process_video_background exception={str(e)}")
         processing_status[job_id]["status"] = "failed"
         processing_status[job_id]["message"] = str(e)
     finally:
@@ -429,10 +430,10 @@ async def process_video_background(
 @router.get("/videos/{job_id}/status", response_model=ProcessingStatus)
 async def get_video_status(job_id: str):
     """Get status of video processing job"""
-    print(f"backend/app/api/endpoints.py get_video_status job_id={job_id}, processing_status={processing_status}")      
+    print(f"backend/app/api/endpoints.py get_video_status job_id={job_id}, processing_status={processing_status}")
     if job_id not in processing_status:
         raise HTTPException(status_code=404, detail="Job not found")
-    
+
     return ProcessingStatus(**processing_status[job_id])
 
 @router.get("/videos/download/{filename}")
@@ -440,13 +441,13 @@ async def download_video(filename: str):
     """Download video file"""
     from app.core.video_processor import get_video_processor
     video_path = os.path.join(get_video_processor().output_dir, filename)
-    print(f"backend/app/api/endpoints.py download_video filename={filename}, video_path={video_path}")      
-    
+    print(f"backend/app/api/endpoints.py download_video filename={filename}, video_path={video_path}")
+
     if not os.path.exists(video_path):
         raise HTTPException(status_code=404, detail="backend/app/api/endpoints.py download_video Video not found")
-    
+
     return FileResponse(
         video_path,
         media_type="video/mp4",
         filename=filename
-    )        
+    )

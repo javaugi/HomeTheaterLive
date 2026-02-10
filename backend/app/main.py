@@ -15,7 +15,7 @@ from pathlib import Path
 shared_path = Path(__file__).resolve().parent.parent.parent / "shared"
 sys.path.insert(0, str(shared_path))
 
-from app.core.config import settings
+from .core.config import settings
 print(">>> importing backend/app/main.py done")
 
 
@@ -24,19 +24,19 @@ async def lifespan(app: FastAPI):
     # Startup
     print("Starting backend/app/main.py HomeTheaterLive Backend...")
     print(f"DEBUG: Current Working Directory: {os.getcwd()}")
-    print(f"DEBUG: Looking for STATIC_DIR  directory at: {os.path.abspath(settings.STATIC_DIR)}")    
-    print(f"DEBUG: Looking for UPLOAD_DIRs directory at: {os.path.abspath(settings.UPLOAD_DIR)}")   
+    print(f"DEBUG: Looking for STATIC_DIR  directory at: {os.path.abspath(settings.STATIC_DIR)}")
+    print(f"DEBUG: Looking for UPLOAD_DIRs directory at: {os.path.abspath(settings.UPLOAD_DIR)}")
     print(f"DEBUG: Looking for env_file location: {os.path.abspath(settings.ENV_FILE_LOC)}")
     print(f"DEBUG: Looking for PROJ_DIR location: {os.path.abspath(settings.PROJ_DIR)}")
     print(f"DEBUG: Looking for settings.VIDEO_OUTPUT_DIR location: {os.path.abspath(settings.VIDEO_OUTPUT_DIR)}")
-    #print(f"DEBUG: Looking for all settings: {settings.model_dump()}")   
-    
+    #print(f"DEBUG: Looking for all settings: {settings.model_dump()}")
+
     # Create database tables during startup (not at import time)
     from app.db.session import engine
     from app.db.base import Base
     print("Creating database tables...")
     Base.metadata.create_all(bind=engine)
-    
+
     yield
     # Shutdown
     print("Shutting down...")
@@ -55,14 +55,14 @@ app = FastAPI(
     redoc_url="/api/redoc",
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
     generate_unique_id_function=custom_generate_unique_id,
-    lifespan=lifespan    
+    lifespan=lifespan
 )
 
 print(">>> backend/app/main.py adding routers")
-from app.api.routes import watch, recommendations
-from app.api.auth import router as auth_router
-from app.api.main import router as main_router
-from app.api.endpoints import router as endpoints_router
+from .api.routes import watch, recommendations
+from .api.auth import router as auth_router
+from .api.main import router as main_router
+from .api.endpoints import router as endpoints_router
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(main_router, prefix=settings.API_V1_STR)
 app.include_router(endpoints_router, prefix=settings.API_V1_STR)
@@ -79,7 +79,7 @@ if settings.all_cors_origins:
         allow_methods=["*"],
         allow_headers=["*"],
         expose_headers=["*"],
-        #expose_headers=["Authorization"]  # Important!        
+        #expose_headers=["Authorization"]  # Important!
     )
 
 # Mount static files directory
