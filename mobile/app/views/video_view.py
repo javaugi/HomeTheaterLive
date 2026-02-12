@@ -18,8 +18,8 @@ import shutil
 import aiohttp
 import httpx
 import aiofiles
+from app.core.config import settings
 
-BASE_URL = "http://127.0.0.1:8000/api/v1"
 
 logger = logging.getLogger(__name__)
 # Setup logging
@@ -29,17 +29,13 @@ logging.basicConfig(
     filename='app_debug.log'
 )
 
-USE_BACKEND_API_CALL: bool = True
-#USE_BACKEND_API_CALL: bool = False
-USE_PATH_DOWNLOAD_CALL: bool = False
-#USE_BACKEND_API_CALL: bool = False
 
 class VideoView:
     """Main video processing view"""
 
-    def __init__(self, app, navigate_back_callback=None):
+    def __init__(self, app, navigate_back_callback=None, backend_api_url: str = settings.BACKEND_API_URL):
         self.app = app
-        self.app.api_base_url = BASE_URL
+        self.app.api_base_url = backend_api_url
         self.navigate_back_callback = navigate_back_callback
 
         # Initialize UI elements to None
@@ -1058,7 +1054,7 @@ class VideoView:
     """
 
     async def create_video(self, widget):
-        if USE_BACKEND_API_CALL:
+        if settings.USE_BACKEND_API_CALL:
             await self.create_video_backend(widget)
         else:
             await self.create_video_frontend(widget)
@@ -1966,13 +1962,11 @@ class VideoView:
                 print(f"DEBUG:mobile/app/views/video_view.py  File exists, using new name: {save_path}")
 
             save_result = None
-            if USE_PATH_DOWNLOAD_CALL and not self.current_video_path:
-                #self.current_video_path = os.path.join(os.path.abspath(settings.VIDEO_OUTPUT_DIR), self.current_video_filename)
-                #self.current_video_path = Path(settings.VIDEO_OUTPUT_DIR).resolve() / self.current_video_filename
+            if settings.USE_PATH_DOWNLOAD_CALL and not self.current_video_path:
                 self.current_video_path = "C:/Users/javau/dev/projects/python/HomeTheaterLive/video_output/" + self.current_video_filename
 
             print(f"DEBUG: mobile/app/views/video_view.py perform_download Copying video from path {self.current_video_path} or url {self.current_video_url} to {save_path}")
-            if USE_PATH_DOWNLOAD_CALL and self.current_video_path:
+            if settings.USE_PATH_DOWNLOAD_CALL and self.current_video_path:
                 self.update_status(f"Saving from {self.current_video_path} to: {os.path.basename(save_path)}")
                 self.update_progress(50)
                 save_result = await self.save_video_file_by_path(save_path)
@@ -2161,8 +2155,6 @@ class VideoView:
 
             # Show copying progress
             self.update_status("Copying video file...")
-            # Use shutil.copy2 to preserve metadata
-            # Method 1: Use shutil.copy2 (recommended for files)
             try:
                 print(f"DEBUG: mobile/app/views/video_view.py Copying from {self.current_video_path} video file size: {source_size} bytes")
                 shutil.copy2(self.current_video_path, save_path)
@@ -2172,6 +2164,15 @@ class VideoView:
                 print(f"DEBUG:mobile/app/views/video_view.py  shutil.copy2 failed: {copy_error} \n\n retry using _copy_file_with_progress")
                 # Method 2: Manual copy with progress
                 await self._copy_file_with_progress(self.current_video_path, save_path)
+            else:
+                # Code that executes only if no exception occurred in the try block
+                print(f"shutil.copy2 successfully from {self.current_video_path} to  {save_path}")
+            finally:
+                # Cleanup temp directory
+                import shutil
+                if os.path.exists(temp_dir):
+                    shutil.rmtree(temp_dir)
+
 
             """
             # Verify the copy was successful

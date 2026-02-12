@@ -107,7 +107,7 @@ async def get_offline_data(request: Request):
         import httpx
 
         async with httpx.AsyncClient() as client:
-            backend_url = f"{settings.API_BASE_URL}{settings.API_V1_STR}/data/offline"
+            backend_url = f"{settings.MOBILE_API_BASE_URL}{settings.API_V1_STR}/data/offline"
             response = await client.get(backend_url)
 
             if response.status_code == 200:

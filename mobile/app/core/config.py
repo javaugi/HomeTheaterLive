@@ -24,24 +24,35 @@ class MobileSettings(BaseSettingsConfig):
         env_prefix="MOBILE_",  # Optional: prefix for mobile-specific env vars
     )
 
+
+    """⚠️ DO NOT use localhost on iOS - iOS does not resolve it properly Always use 127.0.0.1
+    """
+
     PROJECT_NAME: str = os.getenv("PROJECT_NAME", "Home Theater Live")
     API_V1_STR: str = os.getenv("API_V1_STR", "/api/v1")
-    API_BASE_URL: str = os.getenv("API_BASE_URL", "http://localhost:8001")
-    BACKEND_URL: str = os.getenv("BACKEND_URL", "http://localhost:8000")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "local")
+
+    MOBILE_HOST: str = os.getenv("MOBILE_HOST", "0.0.0.0")
+    MOBILE_PORT: int = os.getenv("MOBILE_PORT", 8001)
+    MOBILE_API_BASE_URL: str = os.getenv("MOBILE_API_BASE_URL", "http://127.0.0.1:8001")
+    MOBILE_API_TIMEOUT_SECONDS: int = os.getenv("MOBILE_API_TIMEOUT_SECONDS", 60)
+    MOBILE_OFFLINE_MODE_ENABLED: bool = os.getenv("MOBILE_OFFLINE_MODE_ENABLED", True)
+    MOBILE_WORKERS: int = os.getenv("MOBILE_WORKERS", 1)
+    MOBILE_RELOAD: bool = os.getenv("MOBILE_RELOAD", True)
+
+    BACKEND_HOST: str = os.getenv("BACKEND_HOST", "127.0.0.1")
+    BACKEND_PORT: int = os.getenv("BACKEND_PORT", 8000)
+    BACKEND_URL: str = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+    BACKEND_API_URL: str = os.getenv("BACKEND_API_URL", BACKEND_URL + API_V1_STR)
+
+    USE_BACKEND_API_CALL: bool = os.getenv("USE_BACKEND_API_CALL", True)
+    USE_PATH_DOWNLOAD_CALL: bool = os.getenv("USE_PATH_DOWNLOAD_CALL", False)
+
 
     API_TIMEOUT_SECONDS: int = 30
     SOCKET_HOST: str = "localhost"
     SOCKET_PORT: int = 5000
 
-    """
-    MOBILE_HOST: str = "0.0.0.0"
-    MOBILE_PORT: int = 8001
-    MOBILE_WORKERS: int = 1
-    MOBILE_RELOAD: bool = True
-    BACKEND_HOST: str = "localhost"
-    BACKEND_PORT: int = 8000  # Backend runs on 8000
-    BACKEND_URL: str = "http://localhost:8000"
-    """
 
     # Mobile-specific settings
     MOBILE_CACHE_SIZE: int = 100  # Number of items to cache

@@ -1,25 +1,30 @@
-# backend/app/crud/processing_status.py
-print(">>> importing backend/app/crud/processing_status.py")
+# backend/app/crud/process_status.py
+print(">>> importing backend/app/crud/process_status.py")
 from sqlalchemy.orm import Session
 #from sqlalchemy import desc
 from datetime import datetime
 
-from app.models import ProcessingStatusDB
-from app.model.schemas import ProcessingStatusCreate, ProcessingStatusUpdate
-print(">>> importing backend/app/crud/processing_status.py done")
+from app.model.process_status import ProcessStatusDB
+from app.model.schemas import ProcessStatusCreate, ProcessStatusUpdate
+print(">>> importing backend/app/crud/process_status.py done")
 
-class ProcessingStatusCRUD:
+class ProcessStatusCRUD:
     @staticmethod
-    def create(db: Session, status_data: ProcessingStatusCreate) -> ProcessingStatusDB:
-        db_status = ProcessingStatusDB(
+    def create(db: Session, status_data: ProcessStatusCreate) -> ProcessStatusDB:
+        db_status = ProcessStatusDB(
             job_id=status_data.job_id,
             status=status_data.status,
+            status_code=status_data.status_code,
             progress=status_data.progress,
             message=status_data.message,
             video_url=status_data.video_url,
+            video_path=status_data.video_path,
+            filename=status_data.filename,
+            media_type=status_data.media_type,
             created_at=status_data.created_at,
             completed_at=status_data.completed_at,
-            error=status_data.error
+            error=status_data.error,
+            notes=status_data.notes
         )
         db.add(db_status)
         db.commit()
@@ -27,22 +32,22 @@ class ProcessingStatusCRUD:
         return db_status
 
     @staticmethod
-    def get_by_job_id(db: Session, job_id: str) -> ProcessingStatusDB:
-        return db.query(ProcessingStatusDB).filter(
-            ProcessingStatusDB.job_id == job_id
+    def get_by_job_id(db: Session, job_id: str) -> ProcessStatusDB:
+        return db.query(ProcessStatusDB).filter(
+            ProcessStatusDB.job_id == job_id
         ).first()
 
     @staticmethod
     def get_all(db: Session, skip: int = 0, limit: int = 100):
-        return db.query(ProcessingStatusDB).offset(skip).limit(limit).all()
+        return db.query(ProcessStatusDB).offset(skip).limit(limit).all()
 
     @staticmethod
     def update(
         db: Session,
         job_id: str,
-        update_data: ProcessingStatusUpdate
-    ) -> ProcessingStatusDB:
-        db_status = ProcessingStatusCRUD.get_by_job_id(db, job_id)
+        update_data: ProcessStatusUpdate
+    ) -> ProcessStatusDB:
+        db_status = ProcessStatusCRUD.get_by_job_id(db, job_id)
         if not db_status:
             return None
 
@@ -61,8 +66,8 @@ class ProcessingStatusCRUD:
         job_id: str,
         progress: int,
         message: str = None
-    ) -> ProcessingStatusDB:
-        db_status = ProcessingStatusCRUD.get_by_job_id(db, job_id)
+    ) -> ProcessStatusDB:
+        db_status = ProcessStatusCRUD.get_by_job_id(db, job_id)
         if not db_status:
             return None
 
@@ -85,8 +90,8 @@ class ProcessingStatusCRUD:
         db: Session,
         job_id: str,
         error_message: str
-    ) -> ProcessingStatusDB:
-        db_status = ProcessingStatusCRUD.get_by_job_id(db, job_id)
+    ) -> ProcessStatusDB:
+        db_status = ProcessStatusCRUD.get_by_job_id(db, job_id)
         if not db_status:
             return None
 
@@ -100,7 +105,7 @@ class ProcessingStatusCRUD:
 
     @staticmethod
     def delete(db: Session, job_id: str) -> bool:
-        db_status = ProcessingStatusCRUD.get_by_job_id(db, job_id)
+        db_status = ProcessStatusCRUD.get_by_job_id(db, job_id)
         if not db_status:
             return False
 

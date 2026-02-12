@@ -40,7 +40,7 @@ async def lifespan(app: FastAPI):
     app.state.downloads_dir = settings.DOWNLOADS_DIR
 
     # Configuration dump
-    print(f"\nDEBUG: Mobile Configuration:  API_BASE_URL: {settings.API_BASE_URL}")
+    print(f"\nDEBUG: Mobile Configuration:  MOBILE_API_BASE_URL: {settings.MOBILE_API_BASE_URL}")
     print(f"  API_TIMEOUT_SECONDS: {settings.API_TIMEOUT_SECONDS}")
     print(f"  OFFLINE_MODE_ENABLED: {settings.OFFLINE_MODE_ENABLED}")
     print(f"  MOBILE_CACHE_SIZE: {settings.MOBILE_CACHE_SIZE}")
@@ -190,7 +190,7 @@ async def get_mobile_config():
     safe_config = {
         "project_name": settings.PROJECT_NAME,
         "environment": settings.ENVIRONMENT,
-        "api_base_url": str(settings.API_BASE_URL),
+        "mobile_api_base_url": str(settings.MOBILE_API_BASE_URL),
         "api_timeout": settings.API_TIMEOUT_SECONDS,
         "offline_mode": settings.OFFLINE_MODE_ENABLED,
         "push_enabled": settings.PUSH_NOTIFICATIONS_ENABLED,

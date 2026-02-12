@@ -6,38 +6,8 @@ from datetime import datetime
 from enum import Enum
 print(">>> importing #backend/app/model/schemas.py done")
 
-""" JobStatus or ProcessingStatusBase """
-class JobStatus(BaseModel):
-    job_id: str
-    status: str  # processing, completed, failed
-    progress: int = Field(ge=0, le=100)
-    message: str
-    video_url: Optional[str] = None
-    created_at: datetime
-    updated_at: Optional[datetime] = None
-    completed_at: Optional[datetime] = None
-    error: Optional[str] = None
-    
-class JobStatusCreate(JobStatus):
-    pass
 
-class JobStatusUpdate(BaseModel):
-    status: Optional[str] = None
-    progress: Optional[int] = Field(None, ge=0, le=100)
-    message: Optional[str] = None
-    video_url: Optional[str] = None
-    completed_at: Optional[datetime] = None
-    error: Optional[str] = None
-
-class JobStatusResponse(JobStatus):
-    id: str
-    updated_at: Optional[datetime] = None
-    
-    class Config:
-        from_attributes = True  # For SQLAlchemy compatibility
-""" ProcessingStatus """
-
-""" ProcessingStatus or ProcessingStatusBase """
+""" ProcessingStatus or ProcessStatusBase """
 class ProcessingStatus(BaseModel):
     job_id: str
     status: str  # processing, completed, failed
@@ -49,21 +19,26 @@ class ProcessingStatus(BaseModel):
     completed_at: Optional[datetime] = None
     error: Optional[str] = None
 
-class ProcessingStatusBase(BaseModel):
+class ProcessStatusBase(BaseModel):
     job_id: str
     status: str  # processing, completed, failed
+    status_code: int
     progress: int = Field(ge=0, le=100)
     message: str
     video_url: Optional[str] = None
+    video_path: Optional[str] = None
+    filename: Optional[str] = None
+    media_type: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
     error: Optional[str] = None
-    
-class ProcessingStatusCreate(ProcessingStatusBase):
+    notes: Optional[str] = None
+
+class ProcessStatusCreate(ProcessStatusBase):
     pass
 
-class ProcessingStatusUpdate(BaseModel):
+class ProcessStatusUpdate(BaseModel):
     status: Optional[str] = None
     progress: Optional[int] = Field(None, ge=0, le=100)
     message: Optional[str] = None
@@ -71,10 +46,10 @@ class ProcessingStatusUpdate(BaseModel):
     completed_at: Optional[datetime] = None
     error: Optional[str] = None
 
-class ProcessingStatusResponse(ProcessingStatusBase):
+class ProcessStatusResponse(ProcessStatusBase):
     id: str
     updated_at: Optional[datetime] = None
-    
+
     class Config:
         from_attributes = True  # For SQLAlchemy compatibility
 """ ProcessingStatus """

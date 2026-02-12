@@ -4,7 +4,7 @@ from sqlmodel import Session, create_engine, select
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
-from app import crud
+from app import crud_utils as crud
 from app.core.config import settings
 from app.models import User, UserCreate
 

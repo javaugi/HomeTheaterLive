@@ -14,8 +14,6 @@ class MyHomeTheater(toga.App):
     def __init__(self, formal_name=None):
         super().__init__(formal_name)
 
-        # API Configuration - update with your server IP
-        #self.api_base_url = "http://192.168.1.100:8000/api/v1"
         self.headers = {"Content-Type": "application/json"}
         # Views
         self.home_view = None
@@ -24,7 +22,7 @@ class MyHomeTheater(toga.App):
     def startup(self):
         print("mobile/app/app.py App starting up...")
         SecureStorage.app = self   # 🔥 REQUIRED
-        self._tokens = {}        
+        self._tokens = {}
         self.home_view = HomeView(self)
         self.login_view = LoginView(self)
         self.main_window = toga.MainWindow(title=self.formal_name)
