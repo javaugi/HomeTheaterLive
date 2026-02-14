@@ -23,7 +23,7 @@ def parse_cors(v: Any) -> list[str] | str:
 
 
 class BackendSettings(BaseSettingsConfig):
-    """Backend-specific settings"""    
+    """Backend-specific settings"""
     model_config = SettingsConfigDict(
         env_file="../../.env.backend",  # Specific env file
         env_ignore_empty=True,
@@ -31,40 +31,40 @@ class BackendSettings(BaseSettingsConfig):
         extra="ignore",
         env_prefix="BACKEND_",  # Optional: prefix for backend-specific env vars
     )
-    
+
     # File Upload Settings
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
-    
+
     # Directory settings with automatic creation
     STATIC_DIR: Path = BASE_DIR / "static"
     UPLOAD_DIR: Path = BASE_DIR / "uploads"
     VIDEO_OUTPUT_DIR: Path = BASE_DIR.parent / "video_output"
-    
+
     # File settings
     MAX_FILE_SIZE: int = 100 * 1024 * 1024  # 100MB
     ALLOWED_IMAGE_TYPES: List[str] = [
         "image/jpeg", "image/png", "image/gif",
         "image/bmp", "image/tiff", "image/webp"
     ]
-    
+
     # Video Processing
     DEFAULT_FPS: int = 30
     DEFAULT_RESOLUTION: tuple = (1920, 1080)  # Full HD
     OUTPUT_FORMAT: str = "mp4"
-    
+
     # CORS
     FRONTEND_HOST: str = "http://localhost:5173"
     BACKEND_CORS_ORIGINS: Annotated[
         list[str] | str, BeforeValidator(parse_cors)
     ] = []
-    
+
     # Database
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_PORT: int = 5432
     POSTGRES_USER: str = "mht_dev_user"
     POSTGRES_PASSWORD: str = "mht_dev_pwd_108"
     POSTGRES_DB: str = "PG_MHT_DEV"
-    
+
     # Email/SMTP
     SMTP_TLS: bool = True
     SMTP_SSL: bool = False
@@ -76,16 +76,16 @@ class BackendSettings(BaseSettingsConfig):
     EMAILS_FROM_NAME: str | None = None
     EMAIL_RESET_TOKEN_EXPIRE_HOURS: int = 48
     EMAIL_TEST_USER: EmailStr = "david.lee.remax@gmail.com"
-    
+
     # Celery
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
-    
+
     @computed_field
     @property
     def SQLALCHEMY_DATABASE_URI(self) -> PostgresDsn:
         """Build database URI from components"""
-        return PostgresDsn.build(
+        uri = PostgresDsn.build(
             scheme="postgresql+psycopg",
             username=self.POSTGRES_USER,
             password=self.POSTGRES_PASSWORD,
@@ -93,7 +93,11 @@ class BackendSettings(BaseSettingsConfig):
             port=self.POSTGRES_PORT,
             path=self.POSTGRES_DB,
         )
-    
+
+        print(f"Using database: {uri}")  # ADD THIS - see what you're actually connecting to
+        print(f"Host: {self.POSTGRES_SERVER}, User: {self.POSTGRES_USER}, DB: {self.POSTGRES_DB}")
+        return uri
+
     @computed_field
     @property
     def all_cors_origins(self) -> list[str]:
@@ -105,20 +109,20 @@ class BackendSettings(BaseSettingsConfig):
             origins.append(self.BACKEND_CORS_ORIGINS.rstrip("/"))
         origins.append(self.FRONTEND_HOST.rstrip("/"))
         return origins
-    
+
     @computed_field
     @property
     def emails_enabled(self) -> bool:
         """Check if email functionality is enabled"""
         return bool(self.SMTP_HOST and self.EMAILS_FROM_EMAIL)
-    
+
     @model_validator(mode="after")
     def _set_default_emails_from(self) -> Self:
         """Set default email from name if not provided"""
         if not self.EMAILS_FROM_NAME:
             self.EMAILS_FROM_NAME = self.PROJECT_NAME
         return self
-    
+
     @model_validator(mode="after")
     def _create_directories(self) -> Self:
         """Ensure required directories exist"""
@@ -126,7 +130,7 @@ class BackendSettings(BaseSettingsConfig):
         self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         self.VIDEO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
         return self
-    
+
     @model_validator(mode="after")
     def _validate_backend_secrets(self) -> Self:
         """Backend-specific secret validation"""

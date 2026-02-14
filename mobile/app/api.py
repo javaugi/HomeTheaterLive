@@ -1,8 +1,8 @@
-#mobile/app/api.py
+#Mobile_ApiClient
 """2️⃣ API Interceptor (Auto-Attach Token + Retry) - (Interceptor Pattern)
 Handles API requests, auto-attaches tokens, refreshes on 401.
 """
-print(">>> importing mobile/app/api.py")
+print(">>> importing Mobile_ApiClient")
 import httpx
 import json
 from typing import Dict, Any, List, Optional
@@ -13,7 +13,7 @@ from .storage import SecureStorage
 import aiohttp
 import os
 from .core.config import settings
-print(">>> importing mobile/app/api.py done")
+print(">>> importing Mobile_ApiClient done")
 
 
 """⚠️ DO NOT use localhost on iOS
@@ -38,7 +38,7 @@ class APIClient:
         self.session: Optional[aiohttp.ClientSession] = None
         #self.session.timeout = 30
         self.is_closed = False
-        print(f"mobile/app/api.py APIClient init self.access_token= {self.access_token}")
+        print(f"Mobile_ApiClient init self.access_token= {self.access_token}")
 
     async def ensure_session(self):
         """Ensure we have an active aiohttp session"""
@@ -77,19 +77,9 @@ class APIClient:
 
         try:
             url = f"{self.base_url}/health"
-            print(f"mobile/app/api.py APIClient test_connection {url}")
-
-            print(f"Calling URL: /api/v1/videos/create={self.base_url}/api/v1/videos/create")
-
-            """
-            response = await asyncio.get_event_loop().run_in_executor(
-                None,
-                lambda: self.session.get(url, timeout=5)
-            )
-            return response.status_code == 200
-            """
+            print(f"Mobile_ApiClient test_connection {url}")
             async with self.session.get(url, timeout=5) as response:
-                print(f"mobile/app/api.py APIClient test_connection {url}, response.status={response.status}")
+                print(f"Mobile_ApiClient test_connection {url}, response.status={response.status}")
                 return response.status == 200
 
         except Exception as e:
@@ -113,7 +103,7 @@ class APIClient:
             "Content-Type": "application/x-www-form-urlencoded"
         }
 
-        print(f"mobile/app/api.py Attempting login to: {url}, Data: {data}, Headers: {headers}")
+        print(f"Mobile_ApiClient Attempting login to: {url}, Data: {data}, Headers: {headers}")
         try:
             r = await self.client.post(url, data=data, headers=headers)
             # Debug: Print response details
@@ -123,23 +113,23 @@ class APIClient:
 
             # Check if response is valid JSON
             if r.status_code != 200:
-                print(f"mobile/app/api.py Error: Received status {r.status_code}")
+                print(f"Mobile_ApiClient Error: Received status {r.status_code}")
                 # Try to parse as JSON if possible, otherwise use text
                 try:
                     error_data = r.json()
-                    print(f"mobile/app/api.py Error JSON: {error_data}")
+                    print(f"Mobile_ApiClient Error JSON: {error_data}")
                 except:
-                    print(f"mobile/app/api.py Error Text: {r.text}")
+                    print(f"Mobile_ApiClient Error Text: {r.text}")
                 return {"success": False, "error": f"HTTP {r.status_code}"}
 
             data = r.json()
-            print(f"mobile/app/api.py Login successful, response: {data} , response keys: {list(data.keys())}")
+            print(f"Mobile_ApiClient Login successful, response: {data} , response keys: {list(data.keys())}")
 
             # r.status_code = 200  # For testing purposes only
             if "access_token" in data:
                 self.storage.save_tokens(data["access_token"], data["refresh_token"])
                 self.access_token = data["access_token"]
-                print(f"mobile/app/api.py Access token set and saved: {self.access_token[:20]}...")
+                print(f"Mobile_ApiClient Access token set and saved: {self.access_token[:20]}...")
 
             return {"success": True, **data}
         except json.JSONDecodeError as e:
@@ -200,7 +190,7 @@ class APIClient:
 
     async def get_user_profile(self):
         """Get user profile info"""
-        print(f"mobile/app/api.py APIClient get_user_profile self.access_token= {self.storage.access_token()}")
+        print(f"Mobile_ApiClient get_user_profile self.access_token= {self.storage.access_token()}")
         if not self.access_token:
             return None
 
@@ -220,12 +210,12 @@ class APIClient:
     async def get_continue_watching(self):
         """Get continue watching items"""
         try:
-            print(f"mobile/app/api.py api get_continue_watching Bearer {self.storage.access_token()} ")
+            print(f"Mobile_ApiClient api get_continue_watching Bearer {self.storage.access_token()} ")
             response = await self.client.get(
                 f"{self.base_url}/watch/continue",
                 headers={"Authorization": f"Bearer {self.storage.access_token()}"}
             )
-            print(f"mobile/app/api.py api get_continue_watching response.status_code={response.status_code} ")
+            print(f"Mobile_ApiClient api get_continue_watching response.status_code={response.status_code} ")
             if response.status_code == 200:
                 return response.json()
         except Exception as e:
@@ -235,13 +225,13 @@ class APIClient:
     async def get_recommendations(self, limit=10):
         """Get content recommendations"""
         try:
-            print(f"mobile/app/api.py api get_recommendations Bearer {self.storage.access_token()} ")
+            print(f"Mobile_ApiClient api get_recommendations Bearer {self.storage.access_token()} ")
             response = await self.client.get(
                 f"{self.base_url}/recommendations/",
                 params={"limit": limit},
                 headers={"Authorization": f"Bearer {self.storage.access_token()}"}
             )
-            print(f"mobile/app/api.py api get_recommendations response.status_code={response.status_code} ")
+            print(f"Mobile_ApiClient api get_recommendations response.status_code={response.status_code} ")
             if response.status_code == 200:
                 data = await response.json()
                 print("DEBUG api.py get_recommendations response.json data:", data)
@@ -254,7 +244,7 @@ class APIClient:
     async def search_content(self, query, limit=20):
         """Search for content"""
         try:
-            print(f"mobile/app/api.py api search_content Bearer {self.storage.access_token()} ")
+            print(f"Mobile_ApiClient api search_content Bearer {self.storage.access_token()} ")
             response = await self.client.get(
                 f"{self.base_url}/search",
                 params={"q": query, "limit": limit},
@@ -365,11 +355,11 @@ class APIClient:
         quality: str = "high"
     ) -> Dict[str, Any]:
         """Create video by uploading images to backend"""
-        print(f"mobile/app/api.py create_video fps={fps}, image_paths={len(image_paths)}")
+        print(f"Mobile_ApiClient create_video fps={fps}, image_paths={len(image_paths)}")
         await self.ensure_session()
 
         try:
-            print(f"DEBUG: mobile/app/api.py create_video - Uploading {len(image_paths)} images")
+            print(f"DEBUG: Mobile_ApiClient create_video - Uploading {len(image_paths)} images")
             # Prepare form data
             form_data = aiohttp.FormData()
             form_data.add_field('fps', str(fps))
@@ -389,7 +379,7 @@ class APIClient:
 
                     # Determine content type
                     content_type = self._get_image_content_type(img_path)
-                    print(f"mobile/app/api.py create_video adding field content_type={content_type}")
+                    print(f"Mobile_ApiClient create_video adding field content_type={content_type}")
                     form_data.add_field(
                         'files',
                         io.BytesIO(img_data),
@@ -401,20 +391,7 @@ class APIClient:
                     print(f"DEBUG WARNING: Image not found: {img_path}")
 
 
-            # Add image files
-            """
-            for img_path in image_paths:
-                if Path(img_path).exists():
-                    with open(img_path, 'rb') as f:
-                        form_data.add_field(
-                            'files',
-                            f.read(),
-                            filename=Path(img_path).name,
-                            content_type='image/jpeg'
-                        )
-                    print(f"DEBUG: Added image: {Path(img_path).name}")
-            """
-            print(f"mobile/app/api.py create_video calling /videos/create, \n form_data={form_data}")
+            print(f"Mobile_ApiClient create_video calling /videos/create, \n form_data={form_data}")
             # Send request
             # Send request
             url = f"{self.base_url}/videos/create"
@@ -425,30 +402,37 @@ class APIClient:
             }
 
             async with self.session.post(url, headers=headers, data=form_data) as response:
-            #async with self.session.post(url, data=form_data) as response:
-                print(f"DEBUG: response.status from POST {response.status}")
-                if response.status == 200:
-                    data = await response.json()
-                    print("DEBUG api.py create_video response.json data:", data)
+                data = await response.json()
+                print(f"DEBUG: Mobile_ApiClient create_video response.json()={data} from POST {url}")
+                if response.status == 'completed':
                     return data
                 else:
                     error_text = await response.text()
                     return {
                         'success': False,
+                        'job_id': data.get("job_id"),
+                        'message': data.get("message"),
                         'error': f"Server error: {response.status}",
                         'details': error_text
                     }
+
         except aiohttp.ClientError as e:
-            print(f"ERROR: aiohttp.ClientError {str(e)}")
+            print(f"ERROR: Mobile_ApiClient create_vide aiohttp.ClientError {str(e)}")
             return {
-                'success': False,
-                'error': f"Network error: {str(e)}"
+                'job_id': None,
+                'status': 'failed',
+                'progress': 100,
+                'message': f"aiohttp.ClientError {str(e)} from POST {url}",
+                'error': f"aiohttp.ClientError {str(e)} from POST {url}"
             }
         except Exception as e:
-            print(f"ERROR: Exception {str(e)}")
+            print(f"ERROR: Mobile_ApiClient create_vide Exception {str(e)}")
             return {
-                'success': False,
-                'error': str(e)
+                'job_id': None,
+                'status': 'failed',
+                'progress': 100,
+                'message': f"Error {str(e)} from POST {url}",
+                'error': f"Error {str(e)} from POST {url}"
             }
 
     def _get_image_content_type(self, filepath: str) -> str:
@@ -471,7 +455,7 @@ class APIClient:
     async def get_video_status(self, job_id: str) -> Dict[str, Any]:
         """Get status of video processing job"""
         await self.ensure_session()
-        print(f"mobile/app/api.py get_video_status job_id={job_id} calling /videos/{job_id}/status")
+        print(f"Mobile_ApiClient get_video_status job_id={job_id} calling /videos/{job_id}/status")
 
         try:
             url = f"{self.base_url}/videos/{job_id}/status"
@@ -482,28 +466,37 @@ class APIClient:
             }
 
             async with self.session.get(url, headers=headers) as response:
-                print(f"mobile/app/api.py get_video_status job_id={job_id} response.status={response.status}")
-                if response.status == 200:
-                    data = await response.json()
-                    print("DEBUG api.py get_video_status response.json data:", data)
+                data = await response.json()
+                print(f"Mobile_ApiClient get_video_status job_id={job_id} response.status={response.status} \n response.json()={data}")
+                return data
+                """
+                if response.status == 200 or response.status == 'completed':
                     return data
                 return {
                     'success': False,
-                    'status': 'error',
-                    'error': f"Server error: {response.status}"
+                    'status': 'failed',
+                    'progress': 91,
+                    'message': f"Server error: {response.status}",
+                    'error': f"Server error: {response.status}",
+                    'notes': data
                 }
+                """
         except aiohttp.ClientError as e:
-            print(f"mobile/app/api.py get_video_status job_id={job_id} aiohttp.ClientError=str(e)")
+            print(f"Mobile_ApiClient get_video_status job_id={job_id} aiohttp.ClientError=str(e)")
             return {
                 'success': False,
-                'status': 'error',
+                'status': 'failed',
+                'progress': 91,
+                'message': f"Network error: {str(e)}",
                 'error': f"Network error: {str(e)}"
             }
         except Exception as e:
-            print(f"mobile/app/api.py get_video_status job_id={job_id} exception=str(e)")
+            print(f"Mobile_ApiClient get_video_status job_id={job_id} exception=str(e)")
             return {
                 'success': False,
-                'status': 'error',
+                'status': 'failed',
+                'progress': 91,
+                'message': f"Unexpected error: {str(e)}",
                 'error': f"Unexpected error: {str(e)}"
             }
 
@@ -511,7 +504,7 @@ class APIClient:
         print("Download video file from backend")
         try:
             await self.ensure_session()
-            print(f"mobile/app/api.py download_video filename={filename}, save_path={save_path}")
+            print(f"Mobile_ApiClient download_video filename={filename}, save_path={save_path}")
 
             url = f"{self.base_url}/videos/download/{filename}"
             print(f"DEBUG: Downloading from {url} to {save_path}")
@@ -521,7 +514,7 @@ class APIClient:
             }
 
             async with self.session.get(url, headers=headers) as response:
-                print(f"mobile/app/api.py download_video return status={response.status}")
+                print(f"Mobile_ApiClient download_video return status={response.status}")
                 if response.status == 200:
                     # Ensure directory exists
                     os.makedirs(os.path.dirname(save_path), exist_ok=True)
@@ -546,6 +539,8 @@ class APIClient:
 
                         return {
                             'success': True,
+                            'status': 'completed',
+                            'progress': 90,
                             'path': save_path,
                             'size': file_size
                         }
@@ -553,6 +548,9 @@ class APIClient:
                         print(f"DEBUG: Download failed and File was not saved save_path={save_path}")
                         return {
                             'success': False,
+                            'status': 'failed',
+                            'progress': 91,
+                            'message': 'File was not saved',
                             'error': 'File was not saved'
                         }
                 else:
@@ -560,6 +558,8 @@ class APIClient:
                     print(f"DEBUG: Download failed response_text={response_text}")
                     return {
                         'success': False,
+                        'status': 'failed',
+                        'progress': 91,
                         'error': f"Download failed: HTTP {response.status}",
                         'details': response_text
                     }
@@ -568,12 +568,16 @@ class APIClient:
             print(f"DEBUG: Download aiohttp.ClientError {str(e)}")
             return {
                 'success': False,
+                'status': 'failed',
+                'progress': 91,
                 'error': f"Network error: {str(e)}"
             }
         except Exception as e:
             print(f"Download error: {e}")
             return {
                 'success': False,
+                'status': 'failed',
+                'progress': 91,
                 'error': f"Download error: {str(e)}"
             }
 
@@ -597,9 +601,19 @@ class APIClient:
                 attempts += 1
 
             except Exception as e:
-                return {'status': 'error', 'error': str(e)}
+                return {
+                    'success': False,
+                    'status': 'failed',
+                    'progress': 91,
+                    'error': f"{str(e)}"
+                }
 
-        return {'status': 'timeout', 'error': 'Processing timeout'}
+        return {
+            'success': False,
+            'status': 'failed',
+            'progress': 91,
+            'error': "Processing timeout"
+        }
 
     async def poll_status(
         self,
@@ -609,7 +623,7 @@ class APIClient:
         timeout: float = 600.0,
         max_attempts: int = 300
     ) -> Dict[str, Any]:
-        print("mobile/app/api.py Poll for job completion with callback support")
+        print("Mobile_ApiClient Poll for job completion with callback support")
         start_time = asyncio.get_event_loop().time()
 
         while True:
@@ -618,39 +632,42 @@ class APIClient:
             if elapsed > timeout:
                 return {
                     'success': False,
-                    'status': 'timeout',
+                    'status': 'failed',
+                    'progress': 91,
+                    'message': f'Processing timeout after {timeout} seconds',
                     'error': f'Processing timeout after {timeout} seconds'
                 }
 
             # Get status
             status_data = await self.get_video_status(job_id)
-            print(f"mobile/app/api.py Looping Poll for job completion status_data={status_data}")
+            print(f"Mobile_ApiClient Looping Poll for job completion status_data={status_data}")
 
             if not status_data.get('success', True):
                 return status_data
 
             current_status = status_data.get('status')
-            progress = status_data.get('progress', 0)
+            progress = status_data.get('progress', 10)
             message = status_data.get('message', '')
-            print(f"mobile/app/api.py Looping Poll for job completion current_status={current_status}, progress={progress}")
+            print(f"Mobile_ApiClient Looping Poll for job completion current_status={current_status}, progress={progress}")
 
             # Call progress callback if provided
-            print(f"mobile/app/api.py Looping Poll for job completion on_progress={on_progress}")
+            print(f"Mobile_ApiClient Looping Poll for job completion on_progress={on_progress}")
             if on_progress:
                 #await on_progress(progress, message, current_status)
                 on_progress(progress, message, current_status)
 
             # Check if processing is complete
-            print(f"mobile/app/api.py Looping Poll poll_status done status_data={status_data}")
+            print(f"Mobile_ApiClient Looping Poll poll_status done status_data={status_data}")
             if current_status == 'completed':
                 status_data['success'] = True
                 return status_data
             elif current_status == 'failed':
                 return {
-                    'success': False,
                     'status': 'failed',
-                    'error': status_data.get('message', 'Processing failed'),
-                    'details': status_data
+                    'progress': 91,
+                    'message': status_data.get('message', 'Processing failed'),
+                    'notes': status_data,
+                    'error': status_data.get('message', 'Processing failed')
                 }
 
             # Wait before next poll
@@ -663,9 +680,9 @@ class APIClient:
             if self.session and not self.session.closed:
                 await self.session.close()
                 self.is_closed = True
-                print("DEBUG:mobile/app/api.py close Session closed")
+                print("DEBUG:Mobile_ApiClient close Session closed")
         except Exception as e:
-            print(f"DEBUG:mobile/app/api.py close Error closing session: {e}")
+            print(f"DEBUG:Mobile_ApiClient close Error closing session: {e}")
 
 """
 ✅ Correct Way (FastAPI + Mobile)

@@ -1,5 +1,5 @@
-#backend/app/api/endpoints.py
-print(">>> importing #backend/app/api/endpoints.py")
+#Endpoints
+print(">>> importing #Endpoints")
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, BackgroundTasks
 from fastapi.responses import FileResponse
 from typing import List
@@ -25,7 +25,7 @@ from app.crud.process_status import ProcessStatusCRUD
 router = APIRouter(tags=["endpoints"])
 # In-memory storage for processing status (use Redis in production)
 
-print(">>> importing #backend/app/api/endpoints.py done")
+print(">>> importing #Endpoints done")
 
 
 @router.post("/process/directory", response_model=ProcessStatusResponse)
@@ -42,18 +42,18 @@ async def process_directory(
 
         # Create a unique job ID
         job_id = str(uuid.uuid4())
-        print(f"backend/app/api/endpoints.py process_directory job_id={job_id}, request.directory_path={request.directory_path}")
+        print(f"Endpoints process_directory job_id={job_id}, request.directory_path={request.directory_path}")
         # Create initial status record
         status_data = ProcessStatusCreate(
             job_id=job_id,
             status=ProcessStatuses.pending,
-            progress=0,
+            progress=10,
             message="Job created, waiting to start...",
             created_at=datetime.utcnow()
         )
 
         db_status = ProcessStatusCRUD.create(db, status_data)
-        print(f"backend/app/api/endpoints.py process_directory db_status={db_status}")
+        print(f"Endpoints process_directory db_status={db_status}")
 
 
         background_tasks.add_task(
@@ -62,9 +62,10 @@ async def process_directory(
         )
 
         db_status = ProcessStatusCRUD.get_by_job_id(db, job_id)
-        print(f"backend/app/api/endpoints.py process_directory return db_status={db_status}")
+        print(f"Endpoints process_directory return db_status={db_status}")
 
-        return db_status;
+        #return db_status - using the response model
+        return ProcessStatusResponse.from_orm(db_status)
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -105,17 +106,17 @@ async def process_uploaded_images(
 
         # Create job ID
         job_id = str(uuid.uuid4())
-        print(f"backend/app/api/endpoints.py process_uploaded_images job_id={job_id}, saved_paths={len(saved_paths)}")
+        print(f"Endpoints process_uploaded_images job_id={job_id}, saved_paths={len(saved_paths)}")
         status_data = ProcessStatusCreate(
             job_id=job_id,
             status=ProcessStatuses.pending,
-            progress=0,
+            progress=10,
             message="Processing {len(saved_paths)} images...",
             created_at=datetime.utcnow()
         )
 
         db_status = ProcessStatusCRUD.create(db, status_data)
-        print(f"backend/app/api/endpoints.py process_uploaded_images db_status={db_status}")
+        print(f"Endpoints process_uploaded_images db_status={db_status}")
 
         # Process in background
         background_tasks.add_task(
@@ -128,8 +129,9 @@ async def process_uploaded_images(
 
 
         db_status = ProcessStatusCRUD.get_by_job_id(db, job_id)
-        print(f"backend/app/api/endpoints.py process_uploaded_images return db_status={db_status}")
-        return db_status;
+        print(f"Endpoints process_uploaded_images return db_status={db_status}")
+        #return db_status - using the response model
+        return ProcessStatusResponse.from_orm(db_status)
 
     except HTTPException:
         raise
@@ -143,12 +145,17 @@ async def get_process_status(
     db: Session = Depends(get_db)
 ):
     """Get processing status for a job"""
-    db_status = ProcessStatusCRUD.get_by_job_id(db, job_id)
-    print(f"backend/app/api/endpoints.py get_process_status job_id={job_id}, db_status={db_status}")
-    if not db_status:
-        raise HTTPException(status_code=404, detail="Error get_process_status - Job not found")
+    try:
+        db_status = ProcessStatusCRUD.get_by_job_id(db, job_id)
+        print(f"Endpoints get_process_status job_id={job_id}, db_status={db_status}")
+        if not db_status:
+            raise HTTPException(status_code=404, detail="Error get_process_status - Job not found")
 
-    return db_status
+        return db_status
+    except Exception as e:
+        raise HTTPException(status_code=404, detail=f"Error Job not found get_process_status {str(e)}")
+
+
 
 
 @router.get("/video/{filename}", response_model=ProcessStatusResponse)
@@ -164,7 +171,7 @@ async def get_video_file(filename: str,
 
     # Create job ID
     job_id = str(uuid.uuid4())
-    print(f"backend/app/api/endpoints.py get_video_file job_id={job_id}, filename={filename}, video_path={video_path}")
+    print(f"Endpoints get_video_file job_id={job_id}, filename={filename}, video_path={video_path}")
     status_data = ProcessStatusCreate(
         job_id=job_id,
         status=ProcessStatuses.completed,
@@ -177,10 +184,9 @@ async def get_video_file(filename: str,
     )
 
     db_status = ProcessStatusCRUD.create(db, status_data)
-    print(f"backend/app/api/endpoints.py get_video_file db_status={db_status}")
-
-    return db_status
-
+    print(f"Endpoints get_video_file db_status={db_status}")
+    #return db_status - using the response model
+    return ProcessStatusResponse.from_orm(db_status)
 
 @router.get("/videos")
 async def list_videos():
@@ -224,13 +230,15 @@ async def process_video_task(job_id: str,
 ):
     """Background task for processing directory"""
     try:
-        db_status = ProcessStatusCRUD.get_by_job_id(db, job_id)
-        print(f"backend/app/api/endpoints.py process_video_task job_id={job_id}, db_status={db_status}")
         db_status = ProcessStatusCRUD.update(
             db,
             job_id,
-            ProcessStatusUpdate(status="processing", progress=10, message="Scanning directory and processing for images...")
+            ProcessStatusUpdate(status="processing",
+                    progress=12,
+                    message="Scanning directory and processing for images..."
+                )
         )
+        print(f"Endpoints process_video_task job_id={job_id}, db_status={db_status}")
 
         # Create video
         output_filename = f"{job_id}.mp4"
@@ -243,7 +251,7 @@ async def process_video_task(job_id: str,
             transition_type=settings.transition_type,
             duration_per_image=settings.duration_per_image
         )
-        print(f"backend/app/api/endpoints.py process_video_task 1 video_path={video_path}")
+        print(f"Endpoints process_video_task 1 video_path={video_path}")
 
         # Use the directory method
         video_path = get_video_processor().create_video_from_directory(
@@ -254,7 +262,7 @@ async def process_video_task(job_id: str,
             transition_type=settings.transition_type,
             duration_per_image=settings.duration_per_image
         )
-        print(f"backend/app/api/endpoints.py process_video_task 2 video_path={video_path}")
+        print(f"Endpoints process_video_task 2 video_path={video_path}")
 
         # Update status
         db_status = ProcessStatusCRUD.update(
@@ -269,7 +277,7 @@ async def process_video_task(job_id: str,
                 completed_at=datetime.utcnow()
             )
         )
-        print(f"backend/app/api/endpoints.py process_video_task completed db_status={db_status}")
+        print(f"Endpoints process_video_task completed db_status={db_status}")
 
     except Exception as e:
         db_status = ProcessStatusCRUD.update(
@@ -277,12 +285,13 @@ async def process_video_task(job_id: str,
             job_id,
             ProcessStatusUpdate(
                 status=ProcessStatuses.failed,
+                progress=100,
                 message=str(e),
                 error=str(e),
                 completed_at=datetime.utcnow()
             )
         )
-        print(f"backend/app/api/endpoints.py process_video_task error db_status={db_status}")
+        print(f"Endpoints process_video_task error db_status={db_status}")
 
 
 async def process_upload_task(job_id: str,
@@ -293,13 +302,16 @@ async def process_upload_task(job_id: str,
 ):
     """Background task for processing uploaded files"""
     try:
-        db_status = ProcessStatusCRUD.get_by_job_id(db, job_id)
-        print(f"backend/app/api/endpoints.py process_upload_task job_id={job_id}, db_status={db_status}")
         db_status = ProcessStatusCRUD.update(
             db,
             job_id,
-            ProcessStatusUpdate(status="processing", progress=30, message="Processing images...")
+            ProcessStatusUpdate(
+                    status="processing",
+                    progress=14,
+                    message="Processing images..."
+                )
         )
+        print(f"Endpoints process_upload_task job_id={job_id}, db_status={db_status}")
 
         output_filename = f"{job_id}.mp4"
         from app.core.video_processor import get_video_processor
@@ -311,7 +323,7 @@ async def process_upload_task(job_id: str,
             transition_type=settings.transition_type,
             duration_per_image=settings.duration_per_image
         )
-        print(f"backend/app/api/endpoints.py process_upload_task video_path={video_path}")
+        print(f"Endpoints process_upload_task video_path={video_path}")
 
         # Update status
         db_status = ProcessStatusCRUD.update(
@@ -326,7 +338,7 @@ async def process_upload_task(job_id: str,
                 completed_at=datetime.utcnow()
             )
         )
-        print(f"backend/app/api/endpoints.py process_upload_task completed db_status={db_status}")
+        print(f"Endpoints process_upload_task completed db_status={db_status}")
 
         # Cleanup temp directory
         from app.utils.file_utils import cleanup_temp_directory
@@ -338,6 +350,7 @@ async def process_upload_task(job_id: str,
             job_id,
             ProcessStatusUpdate(
                 status=ProcessStatuses.failed,
+                progress=100,
                 message=str(e),
                 error=str(e),
                 completed_at=datetime.utcnow()
@@ -346,11 +359,10 @@ async def process_upload_task(job_id: str,
         # Cleanup on error too
         from app.utils.file_utils import cleanup_temp_directory
         cleanup_temp_directory(temp_dir)
-        print(f"backend/app/api/endpoints.py process_upload_task error db_status={db_status}")
+        print(f"Endpoints process_upload_task error db_status={db_status}")
 
-@router.post("/videos/{job_id}/create", response_model=ProcessStatusResponse)
+@router.post("/videos/create", response_model=ProcessStatusResponse)
 async def create_video(
-    job_id: str,
     files: List[UploadFile] = File(...),
     fps: int = Form(30),
     duration_per_image: float = Form(2.0),
@@ -362,10 +374,10 @@ async def create_video(
     db: Session = Depends(get_db)
 ):
     """API endpoint to create video from uploaded images"""
-    print(f"backend/app/api/endpoints.py create_video, job_id={job_id}, fps={fps}, files={len(files)}")
     try:
         # Create job ID
-        #job_id = str(uuid.uuid4())
+        job_id = str(uuid.uuid4())
+        print(f"Endpoints create_video, job_id={job_id}, fps={fps}, files={len(files)}")
 
         # Create temp directory for uploaded files
         temp_dir = os.path.join("temp_uploads", job_id)
@@ -380,18 +392,20 @@ async def create_video(
                 buffer.write(content)
             saved_paths.append(file_path)
 
-        db_status = ProcessStatusCRUD.update(
-            db,
-            job_id,
-            ProcessStatusUpdate(
-                status=ProcessStatuses.processing,
-                progress=40,
-                message="Endpoints create_video job_id {job_id} Uploading {len(files)} images ",
-                video_path=temp_dir,
-                updated_at=datetime.utcnow()
-            )
+
+        # Create initial status record
+        status_data = ProcessStatusCreate(
+            job_id=job_id,
+            status=ProcessStatuses.pending,
+            progress=5,
+            message=f"Endpoints create_video job_id {job_id} Uploading {len(files)} images ",
+            video_path=temp_dir,
+            created_at=datetime.utcnow()
         )
-        print(f"backend/app/api/endpoints.py create_video job_id={job_id}, saved_paths={len(saved_paths)}, db_status={db_status}")
+        print(f"Endpoints calling ProcessStatusCRUD.create, job_id={job_id}, saved_paths={len(saved_paths)}, status_data={status_data}")
+
+        db_status = ProcessStatusCRUD.create(db, status_data)
+        print(f"Endpoints create_video, job_id={job_id}, saved_paths={len(saved_paths)}, db_status={db_status}")
 
         # Process in background
         background_tasks.add_task(
@@ -403,7 +417,8 @@ async def create_video(
             transition_type,
             (resolution_width, resolution_height),
             quality,
-            temp_dir
+            temp_dir,
+            db  # Pass the db session
         )
 
         db_status = ProcessStatusCRUD.update(
@@ -411,13 +426,15 @@ async def create_video(
             job_id,
             ProcessStatusUpdate(
                 status=ProcessStatuses.processing,
-                progress=50,
+                progress=18,
                 message="Video creation started",
                 video_url=None,
                 updated_at=datetime.utcnow()
             )
         )
-        print(f"backend/app/api/endpoints.py create_video return db_status={db_status}")
+        print(f"Endpoints done create_video return db_status={db_status}")
+        #return db_status - using the response model
+        return ProcessStatusResponse.from_orm(db_status)
 
     except Exception as e:
         db_status = ProcessStatusCRUD.update(
@@ -425,13 +442,13 @@ async def create_video(
             job_id,
             ProcessStatusUpdate(
                 status=ProcessStatuses.failed,
-                progress=50,
+                progress=100,
                 message=str(e),
                 error=str(e),
                 completed_at=datetime.utcnow()
             )
         )
-        print(f"backend/app/api/endpoints.py /videos/create status_code=500 db_status={db_status}, \n exception={str(e)}")
+        print(f"Endpoints /videos/create status_code=500 db_status={db_status}, \n exception={str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 async def process_video_background(
@@ -443,10 +460,10 @@ async def process_video_background(
     resolution: tuple,
     quality: str,
     temp_dir: str,
-    db: Session = Depends(get_db)
+    db: Session
 ):
     """Background task to process video"""
-    print(f"backend/app/api/endpoints.py process_video_background job_id={job_id}, fps={fps}, image_paths={len(image_paths)}")
+    print(f"Endpoints process_video_background job_id={job_id}, fps={fps}, image_paths={len(image_paths)}")
     try:
         # Update status
         db_status = ProcessStatusCRUD.update(
@@ -454,12 +471,12 @@ async def process_video_background(
             job_id,
             ProcessStatusUpdate(
                 status=ProcessStatuses.processing,
-                progress=60,
+                progress=16,
                 message="Processing images...",
                 updated_at=datetime.utcnow()
             )
         )
-        print(f"backend/app/api/endpoints.py process_video_background db_status={db_status}")
+        print(f"Endpoints process_video_background db_status={db_status}")
 
         # Call the video processor
         from app.core.video_processor import get_video_processor
@@ -470,9 +487,10 @@ async def process_video_background(
             resolution=resolution,
             transition_type=transition_type,
             duration_per_image=duration_per_image,
-            quality=quality
+            quality=quality,
+            db=db  # Pass the db session
         )
-        print(f"backend/app/api/endpoints.py process_video_background finished successfully, \n db_status={db_status}")
+        print(f"Endpoints process_video_background finished successfully, \n db_status={db_status}")
 
         return db_status
 
@@ -482,13 +500,13 @@ async def process_video_background(
             job_id,
             ProcessStatusUpdate(
                 status=ProcessStatuses.failed,
-                progress=60,
+                progress=100,
                 message=str(e),
                 error=str(e),
                 completed_at=datetime.utcnow()
             )
         )
-        print(f"backend/app/api/endpoints.py process_video_background exception={str(e)}, \n db_status={db_status}")
+        print(f"Endpoints process_video_background exception={str(e)}, \n db_status={db_status}")
 
 
 @router.get("/videos/{job_id}/status", response_model=ProcessStatusResponse)
@@ -498,24 +516,24 @@ async def get_video_status(
 ):
     """Get processing status for a job"""
     db_status = ProcessStatusCRUD.get_by_job_id(db, job_id)
-    print(f"backend/app/api/endpoints.py get_video_status job_id={job_id}, db_status={db_status}")
+    print(f"Endpoints get_video_status job_id={job_id}, db_status={db_status}")
     if not db_status:
         raise HTTPException(status_code=404, detail="Error get_video_status - Job not found")
 
-    return db_status
+    #return db_status - using the response model
+    return ProcessStatusResponse.from_orm(db_status)
 
-
-@router.get("/videos/download/{filename}", response_model=ProcessStatusResponse)
+@router.get("/videos/download/{filename}")
 async def download_video(filename: str,
     db: Session = Depends(get_db)
 ):
     """Download video file"""
     from app.core.video_processor import get_video_processor
     video_path = os.path.join(get_video_processor().output_dir, filename)
-    print(f"backend/app/api/endpoints.py download_video filename={filename}, video_path={video_path}")
+    print(f"Endpoints download_video filename={filename}, video_path={video_path}")
 
     if not os.path.exists(video_path):
-        raise HTTPException(status_code=404, detail="backend/app/api/endpoints.py download_video Video not found")
+        raise HTTPException(status_code=404, detail="Endpoints download_video Video not found")
 
     return FileResponse(
         video_path,

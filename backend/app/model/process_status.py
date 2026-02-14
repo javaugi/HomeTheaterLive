@@ -43,7 +43,6 @@ class ProcessStatusDB(Base):
     id = Column(UUID(as_uuid=False), primary_key=True, default=lambda: uuid.uuid4().hex)
     job_id = Column(String, nullable=False, index=True, unique=True)
     status = Column(Enum(ProcessStatuses), index=True, nullable=False, default=ProcessStatuses.pending)
-    status_code = Column(Integer, default=0)
     progress = Column(Integer, default=0)
     message = Column(Text, nullable=True)
     video_url = Column(String, nullable=True)
@@ -51,11 +50,22 @@ class ProcessStatusDB(Base):
     filename = Column(String, nullable=True)
     media_type = Column(Enum(MediaTypes), index=True, nullable=True, default=MediaTypes.video_mp4)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), onupdate=func.now())
+    updated_at = Column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
     completed_at = Column(DateTime(timezone=True), nullable=True)
     error = Column(Text, nullable=True)
     notes = Column(Text, nullable=True)
 
     def __repr__(self):
-        return f"ProcessStatusDB(id={self.id}, job_id={self.job_id}, status={self.status})"# -*- coding: utf-8 -*-
+        return f"ProcessStatusDB(id={self.id}, job_id={self.job_id}, \
+            status={self.status}), progress={self.progress}, message={self.message} \
+            video_url={self.video_url}), video_path={self.video_path}, filename={self.filename} "
 
+"""
+return {
+    'job_id': None,
+    'status': 'failed',
+    'progress': 10,
+    'message': None
+
+}
+"""

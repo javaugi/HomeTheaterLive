@@ -22,7 +22,6 @@ class ProcessingStatus(BaseModel):
 class ProcessStatusBase(BaseModel):
     job_id: str
     status: str  # processing, completed, failed
-    status_code: int
     progress: int = Field(ge=0, le=100)
     message: str
     video_url: Optional[str] = None

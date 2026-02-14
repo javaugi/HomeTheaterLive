@@ -1,5 +1,5 @@
-#backend/app/core/video_processor.py
-print(">>> importing backend/app/core/video_processor.py")
+#VideoProcessor
+print(">>> importing VideoProcessor")
 import numpy as np
 import os
 from typing import List, Optional, Tuple, Dict
@@ -9,6 +9,7 @@ import shutil
 from datetime import datetime
 import subprocess
 import json
+from app.core.config import settings
 
 from fastapi import Depends
 from sqlalchemy.orm import Session
@@ -17,24 +18,21 @@ from app.model.process_status import ProcessStatuses
 from app.model.schemas import ProcessStatusUpdate
 from app.crud.process_status import ProcessStatusCRUD
 
+
 import logging
 logger = logging.getLogger(__name__)
-print(">>> importing backend/app/core/video_processor.py done")
+print(">>> importing VideoProcessor done")
 
 
 class VideoProcessor:
-    def __init__(self, output_dir: str = "processed_videos"):
-        print(">>>backend/app/core/video_processor.py  initializing VideoProcessor")
+    def __init__(self, output_dir: str = settings.VIDEO_OUTPUT_DIR):
+        print(">>>VideoProcessor  initializing VideoProcessor")
         self.output_dir = output_dir
         # ⚠️ DO NOT run ffmpeg, scan dirs, or heavy work here
         # just cheap setup
 
         from concurrent.futures import ThreadPoolExecutor
         self.executor = ThreadPoolExecutor(max_workers=4)
-
-        # H.264 codec settings
-        #self.h264_preset = "medium"  # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
-        #self.h264_crf = 23  # Constant Rate Factor (0-51, lower is better quality)
 
     async def create_video_from_images(
         self,
@@ -45,10 +43,11 @@ class VideoProcessor:
         resolution: Optional[Tuple[int, int]] = None,
         transition_type: str = "none",
         duration_per_image: float = 2.0,
-        quality: str = "high"
+        quality: str = "high",
+        db: Session = None
     ) -> Dict:
         """Create H.264 video from images asynchronously"""
-        print(f"backend/app/core/video_processor.py create_video_from_images image_paths={len(image_paths)}")
+        print(f"VideoProcessor create_video_from_images image_paths={len(image_paths)}")
         loop = asyncio.get_running_loop()
         return await loop.run_in_executor(
             self.executor,
@@ -60,10 +59,13 @@ class VideoProcessor:
             resolution,
             transition_type,
             duration_per_image,
-            quality
+            quality,
+            db
         )
 
 
+    """ The _create_video_sync method is being called from a thread pool executor, so it doesn't have access to the database session.
+    """
     def _create_video_sync(
         self,
         job_id: str,
@@ -74,7 +76,7 @@ class VideoProcessor:
         transition_type: str = "none",
         duration_per_image: float = 2.0,
         quality: str = "high",
-        db: Session = Depends(get_db)
+        db: Session = None  # Remove Depends, just accept db session
     ) -> Dict:
         """Synchronous H.264 video creation"""
         print(f"VideoProcessor _create_video_sync image_paths={len(image_paths)}")
@@ -145,15 +147,15 @@ class VideoProcessor:
                 job_id,
                 ProcessStatusUpdate(
                     status=ProcessStatuses.completed,
-                    status_code=200,
                     progress=100,
                     message=f"H.264 video created successfully: {output_filename} ({self._format_bytes(video_size)})",
                     video_path=video_path,
+                    video_url=f"/api/v1/video/{output_filename}",
                     filename=output_filename,
                     notes=f"codec=H.264, video_size={video_size}, video_info={video_info}"
                 )
             )
-            print(f"backend/app/api/endpoints.py _create_video_sync return db_status={db_status}")
+            print(f"VideoProcessor _create_video_sync return db_status={db_status}")
             return db_status
 
         except Exception as e:
@@ -163,11 +165,12 @@ class VideoProcessor:
                 job_id,
                 ProcessStatusUpdate(
                     status=ProcessStatuses.failed,
+                    progress=100,
                     message=f"Failed to create video: {str(e)}",
                     error=str(e)
                 )
             )
-            print(f"backend/app/api/endpoints.py _create_video_sync error db_status={db_status}")
+            print(f"VideoProcessor _create_video_sync error db_status={db_status}")
             return db_status
 
 
@@ -190,17 +193,11 @@ class VideoProcessor:
         resolution: Optional[Tuple[int, int]],
         transition_type: str,
         duration_per_image: float,
-        quality_settings: Dict,
-        db: Session = Depends(get_db)
+        quality_settings: Dict
     ) -> str:
         """Create video using OpenCV with H.264 codec"""
         # video files go to the HomeTheaterLive/video_output/*.mp4
-        import os
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        OUTPUT_DIR = os.path.join(BASE_DIR, "..", "video_output")
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
-        #os.makedirs(self.output_dir, exist_ok=True)
-        video_path = os.path.join(OUTPUT_DIR, output_filename)
+        video_path = os.path.join(self.output_dir, output_filename)
         print(f"VideoProcessor _create_video_opencv video_path={video_path}")
 
         # Read first image to get dimensions
@@ -317,19 +314,27 @@ class VideoProcessor:
         db: Session = Depends(get_db)
     ) -> str:
         """Create video using FFmpeg directly (most reliable for H.264)"""
-        import os
-        BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-        OUTPUT_DIR = os.path.join(BASE_DIR, "..", "video_output")
-        os.makedirs(OUTPUT_DIR, exist_ok=True)
-        #os.makedirs(self.output_dir, exist_ok=True)
-        video_path = os.path.join(OUTPUT_DIR, output_filename)
-        #video_path = os.path.join(self.output_dir, output_filename)
-        print(f"VideoProcessor _create_video_ffmpeg video_path={video_path}")
-
-        # Create a temporary directory for processed images
-        temp_dir = tempfile.mkdtemp(prefix="video_frames_")
-
         try:
+
+            video_path = os.path.join(self.output_dir, output_filename)
+            print(f"VideoProcessor _create_video_ffmpeg video_path={video_path}")
+            db_status = ProcessStatusCRUD.update(
+                db,
+                job_id,
+                ProcessStatusUpdate(
+                    status=ProcessStatuses.processing,
+                    progress=18,
+                    video_path=video_path,
+                    filename=output_filename,
+                    message="_create_video_ffmpeg: Running FFmpeg command",
+                    updated_at=datetime.utcnow()
+                )
+            )
+
+            # Create a temporary directory for processed images
+            temp_dir = tempfile.mkdtemp(prefix="video_frames_")
+
+
             from PIL import Image
             # Read first image to get dimensions
             first_image = Image.open(image_paths[0])
@@ -366,16 +371,17 @@ class VideoProcessor:
                         global_frame_idx += 1
 
                 progress = 10 + (i / len(image_paths)) * 50
+                print(f"VideoProcessor _create_video_ffmpeg *** looping progress={int(progress)}")
                 db_status = ProcessStatusCRUD.update(
                     db,
                     job_id,
                     ProcessStatusUpdate(
-                        progress=progress,
+                        progress=int(progress),
                         message=f"update_progress value: {int(progress)}",
                         updated_at=datetime.utcnow()
                     )
                 )
-                print(f"backend/app/api/endpoints.py _create_video_ffmpeg update_progress value: {int(progress)}, db_status={db_status}")
+                print(f"VideoProcessor _create_video_ffmpeg update_progress value: {int(progress)}, db_status={db_status}")
 
 
             frame_count = global_frame_idx
@@ -399,18 +405,7 @@ class VideoProcessor:
                 video_path
             ]
 
-            logger.info(f"Running FFmpeg command: {' '.join(ffmpeg_cmd)}")
-            db_status = ProcessStatusCRUD.update(
-                db,
-                job_id,
-                ProcessStatusUpdate(
-                    progress=95,
-                    message="Running FFmpeg command",
-                    updated_at=datetime.utcnow()
-                )
-            )
-            print(f"backend/app/api/endpoints.py _create_video_ffmpeg Running FFmpeg command:\n {' '.join(ffmpeg_cmd)}, \n db_status={db_status}")
-
+            print(f"VideoProcessor _create_video_ffmpeg Running FFmpeg command:\n {' '.join(ffmpeg_cmd)}, \n db_status={db_status}")
             # Execute FFmpeg
             result = subprocess.run(
                 ffmpeg_cmd,
@@ -421,18 +416,19 @@ class VideoProcessor:
 
             if result.returncode != 0:
                 raise RuntimeError(f"FFmpeg failed: {result.stderr}")
-
+            """
             db_status = ProcessStatusCRUD.update(
                 db,
                 job_id,
                 ProcessStatusUpdate(
-                    progress=100,
+                    progress=90,
                     message="Finished Running FFmpeg command",
                     completed_at=datetime.utcnow()
                 )
             )
-            print(f"backend/app/api/endpoints.py _create_video_ffmpeg return for success Video created with FFmpeg: \n video_path={video_path}, \n db_status={db_status}")
-            # C:\Users\javau\dev\projects\python\HomeTheaterLive\backend\..\video_output\video_20260204_170404.mp4
+            """
+            print(f"VideoProcessor _create_video_ffmpeg return for success Video created with FFmpeg: \n video_path={video_path}, \n db_status={db_status}")
+            # C:\Users\javau\dev\projects\python\HomeTheaterLive\backend\video_output\video_20260204_170404.mp4
             return video_path
 
         except Exception as e:
@@ -440,13 +436,14 @@ class VideoProcessor:
                 db,
                 job_id,
                 ProcessStatusUpdate(
-                    progress=ProcessStatuses.failed,
+                    status=ProcessStatuses.failed,
+                    progress=100,
                     message=str(e),
                     error=str(e),
                     completed_at=datetime.utcnow()
                 )
             )
-            print(f"backend/app/api/endpoints.py _create_video_ffmpeg exception={str(e)}, \n db_status={db_status}")
+            print(f"VideoProcessor _create_video_ffmpeg exception={str(e)}, \n db_status={db_status}")
 
 
         finally:
