@@ -1,16 +1,25 @@
 from unittest.mock import patch
 
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from sqlmodel import Session
+from sqlalchemy.orm import Session
+
+# Add project root to path before shared.config import
+from pathlib import Path
+import sys
+project_root = Path(__file__).resolve().parent.parent.parent.parent
+sys.path.insert(0, str(project_root))
 
 from app.core.config import settings
 from app.core.security import verify_password
-from app.crud import create_user
+from app.crud_utils import create_user
 from app.models import UserCreate
-from app.utils import generate_password_reset_token
+from app.email_utils import generate_password_reset_token
 
 from tests.utils.user import user_authentication_headers
 from tests.utils.utils import random_email, random_lower_string
+
+app = FastAPI()
 
 
 def test_get_access_token(client: TestClient) -> None:
@@ -117,3 +126,48 @@ def test_reset_password_invalid_token(
     assert "detail" in response
     assert r.status_code == 400
     assert response["detail"] == "Invalid token"
+
+def test_login(client: TestClient) -> None:
+        auth_url: str = "http://127.0.0.1:8000/api/v1/auth/login"
+        # data = {"username": username, "password": password}
+        data={
+                "username": "test",
+                "password": "test",
+                "grant_type": "password",
+                "scope": "",
+                "client_id": "",
+                "client_secret": ""
+            }
+        headers = {
+            'User-Agent': 'Image2Video-Mobile/1.0',
+            "Content-Type": "application/x-www-form-urlencoded"
+        }
+
+        print(f"Mobile_ApiClient Attempting login to: {auth_url}, Data: {data}, Headers: {headers}")
+        try:
+            client = TestClient(app)
+            r = client.post(auth_url, headers=headers, data=data)
+            # Debug: Print response details
+            print(f"Status Code: {r.status_code}")
+            print(f"Response Headers: {dict(r.headers)}")
+            print(f"Response Text (first 500 chars): {r.text[:500]}")
+
+            # Check if response is valid JSON
+            if r.status_code == 200:
+                return {"success": True, "status_code": f"HTTP {r.status_code}"}
+            else:
+                print(f"Mobile_ApiClient Error: Received status {r.status_code}")
+                # Try to parse as JSON if possible, otherwise use text
+                try:
+                    error_data = r.json()
+                    print(f"Mobile_ApiClient Error JSON: {error_data}")
+                except:
+                    print(f"Mobile_ApiClient Error Text: {r.text}")
+                return {"success": False, "error": f"HTTP {r.status_code}"}
+
+        except Exception as e:
+            print(f"Unexpected error: {e}")
+            import traceback
+            traceback.print_exc()
+            return {"success": False, "error": f"Unexpected error: {str(e)}"}
+

@@ -4,8 +4,10 @@ from sqlalchemy import Column, String, Integer, Text, DateTime, func, Enum
 from sqlalchemy.dialects.postgresql import UUID
 import enum
 
-from sqlalchemy.ext.declarative import declarative_base
+#from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 Base = declarative_base()
+
 print(">>> importing #backend/app/model/video_job.py done ")
 
 class ProcessStatuses(str, enum.Enum):
@@ -38,7 +40,7 @@ class MediaTypes(str, enum.Enum):
     video_3gpp2 = 'video/3gpp2'
 
 class ProcessStatusDB(Base):
-    __tablename__ = "process_status_db"
+    __tablename__ = "process_status"
 
     id = Column(UUID(as_uuid=False), primary_key=True, default=lambda: uuid.uuid4().hex)
     job_id = Column(String, nullable=False, index=True, unique=True)
@@ -56,9 +58,9 @@ class ProcessStatusDB(Base):
     notes = Column(Text, nullable=True)
 
     def __repr__(self):
-        return f"ProcessStatusDB(id={self.id}, job_id={self.job_id}, \
-            status={self.status}), progress={self.progress}, message={self.message} \
-            video_url={self.video_url}), video_path={self.video_path}, filename={self.filename} "
+        return f"ProcessStatusDB(id={self.id}, job_id={self.job_id}, \n \
+            status={self.status}, progress={self.progress}, message={self.message} \n \
+            video_url={self.video_url}, video_path={self.video_path}, filename={self.filename} )"
 
 """
 return {

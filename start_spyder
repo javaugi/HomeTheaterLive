@@ -1,4 +1,21 @@
 #!/bin/sh
+#Summary of Commands 	Action Command
+#Update Dependencies		conda update requests urllib3 chardet
+#Fix Broken Links		conda install requests --force-reinstall
+#Reset Spyder			spyder --reset
 #PATH="/c/Windows/system32:/c/Windows:/c/ProgramData/spyder-6/envs/spyder-runtime/Scripts" /c/ProgramData/spyder-6/envs/spyder-runtime/Scripts/spyder.exe
-alias spyder='PATH="/c/ProgramData/anaconda3/Scripts:$PATH" spyder.exe &'
-spyder
+#alias spyder='PATH="/c/ProgramData/anaconda3/Scripts:$PATH" spyder.exe &'
+#alias start_spyder='PATH="/c/ProgramData/anaconda3/Scripts:$PATH" spyder.exe &'
+#C:\ProgramData\spyder-6\envs\spyder-runtime\Scripts
+#alias run_spyder='PATH="/c/ProgramData/spyder-6:/c/ProgramData/spyder-6/envs/spyder-runtime/Scripts" spyder.exe &'
+
+# open conda prompt
+#pip install --force-reinstall requests
+#conda create -n spyder-env python=3.11 spyder
+#conda activate spyder-env
+#conda env config vars set QT_OPENGL=software   # activates with the env
+#conda deactivate && conda activate spyder-env
+alias run_spyder='PATH="/c/ProgramData/anaconda3/Scripts" spyder.exe &'
+run_spyder
+
+

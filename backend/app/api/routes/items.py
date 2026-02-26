@@ -1,12 +1,10 @@
-print(">>> importing backend/app/api/routes/items.py")
-import uuid
-from typing import Any
-
-from fastapi import APIRouter, HTTPException
-from sqlmodel import func, select
-
-from app.api.deps import CurrentUser, SessionDep
 from app.models import Item, ItemCreate, ItemPublic, ItemsPublic, ItemUpdate, Message
+from app.api.deps import CurrentUser, SessionDep
+from sqlmodel import func, select
+from fastapi import APIRouter, HTTPException
+from typing import Any
+import uuid
+
 
 router = APIRouter(prefix="/items", tags=["items"])
 print(">>> importing backend/app/api/routes/items.py done")

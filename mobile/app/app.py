@@ -1,14 +1,14 @@
-#mobile/app/app.py
+# mobile/app/app.py
 """
 My Home Theater Application to manipulate photos, images, videos and films with integated AI functions
 """
-print(">>> importing mobile/app/app.py")
-import toga
-from .storage import SecureStorage
-from .views.login import LoginView
-from .views.home_view import HomeView
 import asyncio
+from .views.home_view import HomeView
+from .views.login_view import LoginView
+from .storage import SecureStorage
+import toga
 print(">>> importing mobile/app/app.py done")
+
 
 class MyHomeTheater(toga.App):
     def __init__(self, formal_name=None):
@@ -33,10 +33,12 @@ class MyHomeTheater(toga.App):
         # 👇 PASS self (the App instance)
         # storage = SecureStorage()
         storage = SecureStorage(self)
-        print(f"Checking for tokens... token exists: {bool(storage.access_token())} expired: {storage.is_access_expired()}")
+        print(f"Checking for tokens... token exists: {
+              bool(storage.access_token())} expired: {storage.is_access_expired()}")
 
         if storage.access_token() and not storage.is_access_expired():
-            print("mobile/app/app.py User authenticated, loading HomeView at mobile/app/views/home_view.py")
+            print(
+                "mobile/app/app.py User authenticated, loading HomeView at mobile/app/views/home_view.py")
             self.main_window.content = self.home_view
             # Start background tasks if needed
             asyncio.create_task(self.background_tasks())
@@ -46,8 +48,10 @@ class MyHomeTheater(toga.App):
 
         self.main_window.show()
 
+
 def main():
     return MyHomeTheater()
+
 
 """
 4️⃣ Security & App Store Checklist (IMPORTANT)

@@ -5,7 +5,8 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
-from app.db.session import SessionLocal
+from app.db.database import get_db
+
 from app.model.user import User
 from app.core.security import (
     verify_password,
@@ -16,13 +17,6 @@ from app.core.config import settings
 router = APIRouter(prefix="/auth", tags=["auth"])
 print(">>> importing backend/app/api/auth.py done")
 
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 
 """Option B — Temporary Dev Login (Quick Debug Only)
 If you just want to test UI quickly, modify:

@@ -467,11 +467,12 @@ class APIClient:
 
             async with self.session.get(url, headers=headers) as response:
                 data = await response.json()
-                print(f"Mobile_ApiClient get_video_status job_id={job_id} response.status={response.status} \n response.json()={data}")
+                print(f"*** POLLING Mobile_ApiClient get_video_status job_id={job_id} response.status={response.status} \n response.json()={data}")
                 return data
                 """
-                if response.status == 200 or response.status == 'completed':
+                if response.status == 200 or response.status == 'completed' or response.status == 'failed':
                     return data
+
                 return {
                     'success': False,
                     'status': 'failed',
@@ -660,6 +661,7 @@ class APIClient:
             print(f"Mobile_ApiClient Looping Poll poll_status done status_data={status_data}")
             if current_status == 'completed':
                 status_data['success'] = True
+                print(f"Mobile_ApiClient DONE Looping Poll poll_status done status_data={status_data}")
                 return status_data
             elif current_status == 'failed':
                 return {

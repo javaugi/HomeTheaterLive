@@ -1,4 +1,5 @@
 #!/bin/sh
 clear
 pip install -r requirements.txt
-
+echo "Check installation"
+pip check

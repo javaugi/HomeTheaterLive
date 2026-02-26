@@ -1,21 +1,61 @@
 # mobile/app/config.py
-from typing import Optional, Self
-from pathlib import Path
-from sqlmodel import Field
-from pydantic_settings import SettingsConfigDict
-from pydantic import model_validator, computed_field
-import os
-import platform
-import sys
-
-
 # Add project root to Python path
+import sys
+import platform
+import os
+from pydantic import model_validator, computed_field
+from pydantic_settings import SettingsConfigDict
+from sqlmodel import Field
+from pathlib import Path
+from typing import Optional, Self
+
 project_root = Path(__file__).parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
-from shared.config import BaseSettingsConfig
+# from shared.config import BaseSettingsConfig
+
+"""
+Where is the value from in this command :
+    BACKEND_HOST: str = os.getenv("BACKEND_HOST", "127.0.0.1"):
+    1. System environment variables - set in your OS or shell
+    2. Docker/container environment variables - if running in containers
+    3. Process environment - set by whatever process runs your Python app
+
+Will it read from .env files?
+    No, not automatically. The os.getenv() function only reads from the actual 
+        OS environment variables, not directly from .env, .env_mobile, or .env_backend files.      
+
+To make it work with .env files:
+    You need to load the .env file first using a package like python-dotenv:
+
+python
+    from dotenv import load_dotenv
+    import os
+    
+    # Load the specific .env file you want
+    load_dotenv('.env')  # or '.env_mobile' or '.env_backend'
+    
+    # Now this will read from the loaded .env file
+    BACKEND_HOST: str = os.getenv("BACKEND_HOST", "127.0.0.1")     
+
+Common patterns:
+# Load based on environment
+    import os
+    from dotenv import load_dotenv
+    
+    env = os.getenv('ENV', 'development')
+    if env == 'mobile':
+        load_dotenv('.env_mobile')
+    elif env == 'backend':
+        load_dotenv('.env_backend')
+    else:
+        load_dotenv('.env')
+    
+    BACKEND_HOST = os.getenv("BACKEND_HOST", "127.0.0.1")    
+"""
 
 
-class MobileSettings(BaseSettingsConfig):
+class MobileSettings(__import__("shared.config",
+                                fromlist=["BaseSettingsConfig"]).BaseSettingsConfig):
     """Mobile-specific settings"""
     model_config = SettingsConfigDict(
         env_file=".env.mobile",  # Mobile-specific env file
@@ -24,9 +64,11 @@ class MobileSettings(BaseSettingsConfig):
         env_prefix="MOBILE_",  # Optional: prefix for mobile-specific env vars
     )
 
-
     """⚠️ DO NOT use localhost on iOS - iOS does not resolve it properly Always use 127.0.0.1
     """
+    # File Upload Settings
+    BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
+    VIDEO_OUTPUT_DIR: Path = BASE_DIR.parent / "video_output"
 
     PROJECT_NAME: str = os.getenv("PROJECT_NAME", "Home Theater Live")
     API_V1_STR: str = os.getenv("API_V1_STR", "/api/v1")
@@ -34,25 +76,27 @@ class MobileSettings(BaseSettingsConfig):
 
     MOBILE_HOST: str = os.getenv("MOBILE_HOST", "0.0.0.0")
     MOBILE_PORT: int = os.getenv("MOBILE_PORT", 8001)
-    MOBILE_API_BASE_URL: str = os.getenv("MOBILE_API_BASE_URL", "http://127.0.0.1:8001")
-    MOBILE_API_TIMEOUT_SECONDS: int = os.getenv("MOBILE_API_TIMEOUT_SECONDS", 60)
-    MOBILE_OFFLINE_MODE_ENABLED: bool = os.getenv("MOBILE_OFFLINE_MODE_ENABLED", True)
+    MOBILE_API_BASE_URL: str = os.getenv(
+        "MOBILE_API_BASE_URL", "http://127.0.0.1:8001")
+    MOBILE_API_TIMEOUT_SECONDS: int = os.getenv(
+        "MOBILE_API_TIMEOUT_SECONDS", 60)
+    MOBILE_OFFLINE_MODE_ENABLED: bool = os.getenv(
+        "MOBILE_OFFLINE_MODE_ENABLED", True)
     MOBILE_WORKERS: int = os.getenv("MOBILE_WORKERS", 1)
     MOBILE_RELOAD: bool = os.getenv("MOBILE_RELOAD", True)
 
     BACKEND_HOST: str = os.getenv("BACKEND_HOST", "127.0.0.1")
     BACKEND_PORT: int = os.getenv("BACKEND_PORT", 8000)
     BACKEND_URL: str = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
-    BACKEND_API_URL: str = os.getenv("BACKEND_API_URL", BACKEND_URL + API_V1_STR)
+    BACKEND_API_URL: str = os.getenv(
+        "BACKEND_API_URL", BACKEND_URL + API_V1_STR)
 
     USE_BACKEND_API_CALL: bool = os.getenv("USE_BACKEND_API_CALL", True)
     USE_PATH_DOWNLOAD_CALL: bool = os.getenv("USE_PATH_DOWNLOAD_CALL", False)
 
-
     API_TIMEOUT_SECONDS: int = 30
     SOCKET_HOST: str = "localhost"
     SOCKET_PORT: int = 5000
-
 
     # Mobile-specific settings
     MOBILE_CACHE_SIZE: int = 100  # Number of items to cache
@@ -75,7 +119,6 @@ class MobileSettings(BaseSettingsConfig):
     DEFAULT_PAGE_SIZE: int = 20
     PULL_TO_REFRESH_ENABLED: bool = True
 
-
     # Directory settings with sensible defaults
     CACHE_DIR: Optional[Path] = None
     DOWNLOADS_DIR: Optional[Path] = None
@@ -85,21 +128,21 @@ class MobileSettings(BaseSettingsConfig):
     MOBILE_CACHE_DIR: Path = Field(
         default_factory=lambda: Path(
             os.getenv("MOBILE_CACHE_DIR",
-                     Path.home() / ".hometheaterlive" / "mobile" / "cache")
+                      Path.home() / ".hometheaterlive" / "mobile" / "cache")
         )
     )
 
     MOBILE_DOWNLOADS_DIR: Path = Field(
         default_factory=lambda: Path(
             os.getenv("MOBILE_DOWNLOADS_DIR",
-                     Path.home() / ".hometheaterlive" / "mobile" / "downloads")
+                      Path.home() / ".hometheaterlive" / "mobile" / "downloads")
         )
     )
 
     MOBILE_DATA_DIR: Path = Field(
         default_factory=lambda: Path(
             os.getenv("MOBILE_DATA_DIR",
-                     Path.home() / ".hometheaterlive" / "mobile" / "data")
+                      Path.home() / ".hometheaterlive" / "mobile" / "data")
         )
     )
 
@@ -107,7 +150,8 @@ class MobileSettings(BaseSettingsConfig):
     MOBILE_HOST: str = "0.0.0.0"
     MOBILE_PORT: int = 8001
     MOBILE_WORKERS: int = 1
-    MOBILE_RELOAD: bool = Field(default_factory=lambda: os.getenv("ENVIRONMENT") == "local")
+    MOBILE_RELOAD: bool = Field(
+        default_factory=lambda: os.getenv("ENVIRONMENT") == "local")
 
     @computed_field
     @property
@@ -122,7 +166,8 @@ class MobileSettings(BaseSettingsConfig):
 
         # Determine platform-specific base directory
         if platform.system() == "Windows":
-            base_dir = Path(os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
+            base_dir = Path(
+                os.getenv("LOCALAPPDATA", Path.home() / "AppData" / "Local"))
         elif platform.system() == "Darwin":  # macOS
             base_dir = Path.home() / "Library" / "Application Support"
         else:  # Linux/Unix
@@ -152,7 +197,8 @@ class MobileSettings(BaseSettingsConfig):
         for dir_path in [self.CACHE_DIR, self.DOWNLOADS_DIR, self.LOGS_DIR, self.DATA_DIR]:
             if dir_path:
                 dir_path.mkdir(parents=True, exist_ok=True)
-                print(f"DEBUG: Directory ensured: {dir_path} (exists: {dir_path.exists()})")
+                print(f"DEBUG: Directory ensured: {
+                      dir_path} (exists: {dir_path.exists()})")
 
         return self
 
@@ -167,7 +213,6 @@ class MobileSettings(BaseSettingsConfig):
 
 
 # Create settings instance
-settings = MobileSettings()# -*- coding: utf-8 -*-
+settings = MobileSettings()  # -*- coding: utf-8 -*-
 
 # -*- coding: utf-8 -*-
-

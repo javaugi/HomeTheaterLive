@@ -1,16 +1,17 @@
 import uuid
 from typing import Any
 
-from sqlmodel import Session, select
+from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from app.core.security import get_password_hash, verify_password
-from app.model.user import User
-from app.models import Item, ItemCreate, UserCreate, UserUpdate
+from app.models import User, Item, ItemCreate, UserCreate, UserUpdate
 
 
 def create_user(*, session: Session, user_create: UserCreate) -> User:
     db_obj = User.model_validate(
-        user_create, update={"hashed_password": get_password_hash(user_create.password)}
+        user_create, update={
+            "hashed_password": get_password_hash(user_create.password)}
     )
     session.add(db_obj)
     session.commit()

@@ -53,12 +53,40 @@ def validate_image_files(files: List[UploadFile]):
             )
 
 
-def create_temp_directory() -> str:
+def create_temp_directory(prefix: str="image2video_") -> str:
     """Create a temporary directory for uploaded files"""
-    return tempfile.mkdtemp(prefix="image2video_")
+    try:
+        temp_dir = tempfile.mkdtemp(prefix)
+        print(f"app/utils/file_utils create_temp_directory prefix={prefix}, temp_dir={temp_dir}")
+        return temp_dir
+    except PermissionError as e:
+        # Fallback to current directory
+        fallback_dir = os.path.join(os.getcwd(), "temp_frames")
+        os.makedirs(fallback_dir, exist_ok=True)
+        print(f"Permission denied error {e}- app/utils/file_utils create_temp_directory prefix={prefix}. \n Try running with appropriate permissions. fallback_dir={fallback_dir}")
+        return fallback_dir
+    except OSError as e:
+        print(f"OS error: {e}")
+        # Try alternative location
+        fallback_dir = os.path.join(os.path.expanduser("~"), "temp_frames")
+        os.makedirs(fallback_dir, exist_ok=True)
+        print(f"OS error: {e}- app/utils/file_utils create_temp_directory prefix={prefix}. \n Try running with appropriate permissions. fallback_dir={fallback_dir}")
+        return fallback_dir
 
-
-def cleanup_temp_directory(directory: str):
-    """Clean up temporary directory"""
-    if os.path.exists(directory):
-        shutil.rmtree(directory)
+def cleanup_temp_directory(prefix="image2video_", max_age_hours=24):
+    temp_base = tempfile.gettempdir()
+    import time
+    current_time = time.time()
+    
+    for item in os.listdir(temp_base):
+        if item.startswith(prefix) or item.startswith("temp_frames"):
+            item_path = os.path.join(temp_base, item)
+            if os.path.isdir(item_path):
+                # Check if older than max_age_hours
+                age = current_time - os.path.getctime(item_path)
+                if age > max_age_hours * 3600:
+                    try:
+                        shutil.rmtree(item_path)
+                        print(f"app/utils/file_utils cleanup_temp_directory Removed old temp dir: {item_path}")
+                    except:
+                        pass

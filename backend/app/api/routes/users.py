@@ -1,20 +1,4 @@
-print(">>> importing backend/app/api/routes/users.py")
-import uuid
-from typing import Any
-
-from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import col, delete, func, select
-
-from app import crud
-from app.api.deps import (
-    CurrentUser,
-    SessionDep,
-    get_current_active_superuser,
-)
-from app.core.config import settings
-from app.core.security import get_password_hash, verify_password
-
-from app.model.user import User
+from app.utils import generate_new_account_email, send_email
 from app.models import (
     Item,
     Message,
@@ -26,7 +10,20 @@ from app.models import (
     UserUpdate,
     UserUpdateMe,
 )
-from app.utils import generate_new_account_email, send_email
+from app.model.user import User
+from app.core.security import get_password_hash, verify_password
+from app.core.config import settings
+from app.api.deps import (
+    CurrentUser,
+    SessionDep,
+    get_current_active_superuser,
+)
+from app import crud
+from sqlmodel import col, delete, func, select
+from fastapi import APIRouter, Depends, HTTPException
+from typing import Any
+import uuid
+
 
 router = APIRouter(prefix="/users", tags=["users"])
 print(">>> importing backend/app/api/routes/users.py done")
@@ -58,7 +55,8 @@ def create_user(*, session: SessionDep, user_in: UserCreate) -> Any:
     """
     Create new user.
     """
-    print(f"create_user post user me id, {user_in.id}, email to {user_in.email}")
+    print(f"create_user post user me id, {
+          user_in.id}, email to {user_in.email}")
     user = crud.get_user_by_email(session=session, email=user_in.email)
     if user:
         raise HTTPException(
@@ -86,9 +84,11 @@ def update_user_me(
     """
     Update own user.
     """
-    print(f"update_user_me patch user me id, {current_user.id}, email to {user_in.id}, email to {user_in.email}")
+    print(f"update_user_me patch user me id, {current_user.id}, email to {
+          user_in.id}, email to {user_in.email}")
     if user_in.email:
-        existing_user = crud.get_user_by_email(session=session, email=user_in.email)
+        existing_user = crud.get_user_by_email(
+            session=session, email=user_in.email)
         if existing_user and existing_user.id != current_user.id:
             raise HTTPException(
                 status_code=409, detail="User with this email already exists"
@@ -108,7 +108,8 @@ def update_password_me(
     """
     Update own password.
     """
-    print(f"update_password_me patch user me id, {current_user.id}, email to {current_user.email}")
+    print(f"update_password_me patch user me id, {
+          current_user.id}, email to {current_user.email}")
     if not verify_password(body.current_password, current_user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect password")
     if body.current_password == body.new_password:
@@ -127,7 +128,8 @@ def read_user_me(current_user: CurrentUser) -> Any:
     """
     Get current user.
     """
-    print(f"read_user_me get user me id, {current_user.id}, email to {current_user.email}")
+    print(f"read_user_me get user me id, {
+          current_user.id}, email to {current_user.email}")
     return current_user
 
 
@@ -136,7 +138,8 @@ def delete_user_me(session: SessionDep, current_user: CurrentUser) -> Any:
     """
     Delete own user.
     """
-    print(f"delete_user_me delete user me id, {current_user.id}, email to {current_user.email}")
+    print(f"delete_user_me delete user me id, {
+          current_user.id}, email to {current_user.email}")
     if current_user.is_superuser:
         raise HTTPException(
             status_code=403, detail="Super users are not allowed to delete themselves"
@@ -151,7 +154,8 @@ def register_user(session: SessionDep, user_in: UserRegister) -> Any:
     """
     Create new user without the need to be logged in.
     """
-    print(f"register_user post user me id, {user_in.id}, email to {user_in.email}")
+    print(f"register_user post user me id, {
+          user_in.id}, email to {user_in.email}")
     user = crud.get_user_by_email(session=session, email=user_in.email)
     if user:
         raise HTTPException(
@@ -170,7 +174,8 @@ def read_user_by_id(
     """
     Get a specific user by id.
     """
-    print(f"read_user_by_id get user by id, {user_id}, current user id {current_user.id}, email to {current_user.email}")
+    print(f"read_user_by_id get user by id, {user_id}, current user id {
+          current_user.id}, email to {current_user.email}")
     user = session.get(User, user_id)
     if user == current_user:
         return user
@@ -196,7 +201,8 @@ def update_user(
     """
     Update a user.
     """
-    print(f"update_user patch user by id, {user_id}, current user id {user_in.id}, email to {user_in.email}")
+    print(f"update_user patch user by id, {user_id}, current user id {
+          user_in.id}, email to {user_in.email}")
     db_user = session.get(User, user_id)
     if not db_user:
         raise HTTPException(
@@ -204,13 +210,15 @@ def update_user(
             detail="The user with this id does not exist in the system",
         )
     if user_in.email:
-        existing_user = crud.get_user_by_email(session=session, email=user_in.email)
+        existing_user = crud.get_user_by_email(
+            session=session, email=user_in.email)
         if existing_user and existing_user.id != user_id:
             raise HTTPException(
                 status_code=409, detail="User with this email already exists"
             )
 
-    db_user = crud.update_user(session=session, db_user=db_user, user_in=user_in)
+    db_user = crud.update_user(
+        session=session, db_user=db_user, user_in=user_in)
     return db_user
 
 
@@ -221,7 +229,8 @@ def delete_user(
     """
     Delete a user.
     """
-    print(f"delete_user delete user by id, {user_id}, current user id {current_user.id}, email to {current_user.email}")
+    print(f"delete_user delete user by id, {user_id}, current user id {
+          current_user.id}, email to {current_user.email}")
     user = session.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

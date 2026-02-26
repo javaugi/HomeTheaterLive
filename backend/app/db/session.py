@@ -1,32 +1,14 @@
-print(">>> importing #backend/app/db/session.py")
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
+# app/db/session.py
+from contextlib import contextmanager
+from contextvars import ContextVar
+from sqlalchemy.orm import Session
 
-from ..core.config import settings
-print(">>> importing #backend/app/db/session.py done")
+current_db_session: ContextVar[Session | None] = ContextVar("current_db_session", default=None)
 
-# DATABASE_URL = "sqlite:///./app.db"
-#DATABASE_URL = (
-#    "postgresql+psycopg2://mht_dev_user:mht_dev_pwd_108@localhost:5432/PG_MHT_DEV"
-#)
-engine = create_engine(
-    str(settings.SQLALCHEMY_DATABASE_URI),
-    connect_args={"check_same_thread": False} if "PostgresDsn" in str(settings.SQLALCHEMY_DATABASE_URI) else {}
-)
+@contextmanager
+def db_session_scope():
+    session = current_db_session.get()
+    if session is None:
+        raise RuntimeError("No database session in context")
+    yield session
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
-
-Base = declarative_base()
-
-
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()

@@ -31,7 +31,7 @@ $ source .venv/bin/activate
 
 Make sure your editor is using the correct Python virtual environment, with the interpreter at `backend/.venv/bin/python`.
 
-Modify or add SQLModel models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
+Modify or add SQLAlchemy ORM  models for data and SQL tables in `./backend/app/models.py`, API endpoints in `./backend/app/api/`, CRUD (Create, Read, Update, Delete) utils in `./backend/app/crud.py`.
 
 ## VS Code
 
@@ -142,7 +142,7 @@ Make sure you create a "revision" of your models and that you "upgrade" your dat
 $ docker compose exec backend bash
 ```
 
-* Alembic is already configured to import your SQLModel models from `./backend/app/models.py`.
+* Alembic is already configured to import your SQLAlchemy ORM  models from `./backend/app/models.py`.
 
 * After changing a model (for example, adding a column), inside the container, create a revision, e.g.:
 
@@ -161,7 +161,7 @@ $ alembic upgrade head
 If you don't want to use migrations at all, uncomment the lines in the file at `./backend/app/core/db.py` that end in:
 
 ```python
-SQLModel.metadata.create_all(engine)
+Base.metadata.create_all(engine)
 ```
 
 and comment the line in the file `scripts/prestart.sh` that contains:

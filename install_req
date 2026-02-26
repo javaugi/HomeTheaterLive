@@ -1,0 +1,7 @@
+#!/bin/sh
+clear
+echo "Install requirements"
+pip install -r requirements.txt
+echo "Check installation"
+pip check
+

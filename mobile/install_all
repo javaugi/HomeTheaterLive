@@ -1,6 +1,11 @@
 #!/bin/sh
 clear
+echo "set up virtual environments"
+./install_venv
+echo "set up requirements.txt"
 pip install -r requirements.txt
+echo "Check installation"
+pip check
 uv sync
 # pip install "fastapi[standard]"
 # python -m pip install sqlalchemy[asyncio]

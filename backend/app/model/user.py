@@ -1,7 +1,8 @@
 # app/model/user.py
 from sqlalchemy import Column, Integer, String
 
-from app.db.base import Base
+from app.db.database import Base
+
 
 class User(Base):
     __tablename__ = "users"
@@ -13,5 +14,6 @@ class User(Base):
     role = Column(String, default="user")
     full_name = Column(String, nullable=True)
     disabled = Column(Integer, default=0)  # 0 = active, 1 = disabled
+
     def __repr__(self):
         return f"<User(username={self.username}, email={self.email}, role={self.role})>"

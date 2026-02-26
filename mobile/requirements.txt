@@ -12,8 +12,8 @@ numpy
 opencv-python
 passlib[bcrypt]
 pillow
-psycopg
-psycopg2-binary
+#psycopg
+psycopg[binary]
 pydantic
 PyJWT[crypto]
 pytest-asyncio
@@ -27,6 +27,7 @@ redis
 sqlalchemy
 sqlmodel
 starlette
+toga
 uvicorn
 websockets
 Werkzeug

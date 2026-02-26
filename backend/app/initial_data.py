@@ -1,8 +1,8 @@
 import logging
 
-from sqlmodel import Session
+from sqlalchemy.orm import Session
 
-from app.core.db import engine, init_db
+from app.db.database import engine, init_db
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

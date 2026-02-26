@@ -1,14 +1,19 @@
 #!/bin/sh
 clear
+echo "set up virtual environments"
+./install_venv
+echo "set up requirements"
 pip install -r requirements.txt
-pip install --upgrade passlib[bcrypt]
-pip install "psycopg[binary]"
+echo "Check installation"
+pip check
+#pip install --upgrade passlib[bcrypt]
+#pip install "psycopg[binary]"
 uv sync
 # pip install "fastapi[standard]"
 # python -m pip install sqlalchemy[asyncio]
-# python -m pip install sqlmodel[asyncio]
+# If you ever want to mix SQLModel + SQLAlchemy ORM → decide on one and stick to it 
 # 📌 What each one does:
-# sqlalchemy → DB layer
+# SQLAlchemy ORM → DB layer
 # passlib[bcrypt] → password hashing
 # python-jose → JWT
 # python-multipart → OAuth2 form parsing

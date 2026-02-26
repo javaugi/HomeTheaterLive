@@ -2,6 +2,7 @@
 from typing import Annotated, Any, List, Self
 from pathlib import Path
 import sys
+import os
 
 from pydantic import PostgresDsn, computed_field, BeforeValidator, EmailStr, model_validator
 from pydantic_settings import SettingsConfigDict
@@ -9,8 +10,6 @@ from pydantic_settings import SettingsConfigDict
 # Add project root to path before shared.config import
 project_root = Path(__file__).resolve().parent.parent.parent.parent
 sys.path.insert(0, str(project_root))
-
-from shared.config import BaseSettingsConfig
 
 
 def parse_cors(v: Any) -> list[str] | str:
@@ -22,7 +21,9 @@ def parse_cors(v: Any) -> list[str] | str:
     raise ValueError(v)
 
 
-class BackendSettings(BaseSettingsConfig):
+# class BackendSettings(BaseSettingsConfig):
+class BackendSettings(__import__("shared.config",
+                                 fromlist=["BaseSettingsConfig"]).BaseSettingsConfig):
     """Backend-specific settings"""
     model_config = SettingsConfigDict(
         env_file="../../.env.backend",  # Specific env file
@@ -35,10 +36,21 @@ class BackendSettings(BaseSettingsConfig):
     # File Upload Settings
     BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
 
+    PROJECT_NAME: str = os.getenv("PROJECT_NAME", "Home Theater Live")
+    API_V1_STR: str = os.getenv("API_V1_STR", "/api/v1")
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "local")
+
+    BACKEND_URL: str = os.getenv("BACKEND_URL", "http://127.0.0.1:8000")
+    BACKEND_API_URL: str = os.getenv(
+        "BACKEND_API_URL", BACKEND_URL + API_V1_STR)
+
     # Directory settings with automatic creation
     STATIC_DIR: Path = BASE_DIR / "static"
     UPLOAD_DIR: Path = BASE_DIR / "uploads"
     VIDEO_OUTPUT_DIR: Path = BASE_DIR.parent / "video_output"
+    SOUNDFONTS_DIR: Path = STATIC_DIR / "soundfonts"
+
+    GM2_SOUNDFONT_PATH: Path = SOUNDFONTS_DIR / "GM2_Map_Soundfont.sf2"
 
     # File settings
     MAX_FILE_SIZE: int = 100 * 1024 * 1024  # 100MB
@@ -94,8 +106,10 @@ class BackendSettings(BaseSettingsConfig):
             path=self.POSTGRES_DB,
         )
 
-        print(f"Using database: {uri}")  # ADD THIS - see what you're actually connecting to
-        print(f"Host: {self.POSTGRES_SERVER}, User: {self.POSTGRES_USER}, DB: {self.POSTGRES_DB}")
+        # ADD THIS - see what you're actually connecting to
+        print(f"Using database: {uri}")
+        print(f"Host: {self.POSTGRES_SERVER}, User: {
+              self.POSTGRES_USER}, DB: {self.POSTGRES_DB}")
         return uri
 
     @computed_field
@@ -104,7 +118,8 @@ class BackendSettings(BaseSettingsConfig):
         """Get all allowed CORS origins"""
         origins = []
         if isinstance(self.BACKEND_CORS_ORIGINS, list):
-            origins.extend([str(origin).rstrip("/") for origin in self.BACKEND_CORS_ORIGINS])
+            origins.extend([str(origin).rstrip("/")
+                           for origin in self.BACKEND_CORS_ORIGINS])
         elif isinstance(self.BACKEND_CORS_ORIGINS, str):
             origins.append(self.BACKEND_CORS_ORIGINS.rstrip("/"))
         origins.append(self.FRONTEND_HOST.rstrip("/"))
@@ -129,6 +144,7 @@ class BackendSettings(BaseSettingsConfig):
         self.STATIC_DIR.mkdir(parents=True, exist_ok=True)
         self.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
         self.VIDEO_OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+        self.SOUNDFONTS_DIR.mkdir(parents=True, exist_ok=True)
         return self
 
     @model_validator(mode="after")

@@ -1,0 +1,25 @@
+#!/bin/sh
+clear
+echo "Running curl_health"
+./curl_health
+echo ""
+echo "Running curl_login"
+./curl_login
+
+python ./tests/conftest.py
+
+python ./tests/api/routes/test_items.py
+python ./tests/api/routes/test_login.py
+python ./tests/api/routes/test_private.py
+python ./tests/api/routes/test_users.py
+python ./tests/crud/test_user.py
+
+python ./tests/scripts/test_backend_pre_start.py
+python ./tests/crud/test_test_pre_start.py
+
+python ./tests/utils/user.py
+python ./tests/utils/utils.py
+python ./tests/utils/item.py
+
+
+python ./tests/app/core/test_pro_video_music_generator.py

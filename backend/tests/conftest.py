@@ -1,15 +1,22 @@
+from tests.utils.utils import get_superuser_token_headers
+from tests.utils.user import authentication_token_from_email
+from app.models import Item, User
+from app.main import app
+from app.db.database import engine, init_db
+from app.core.config import settings
 from collections.abc import Generator
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlmodel import Session, delete
+from sqlalchemy.orm import Session
+from sqlmodel import delete
 
-from app.core.config import settings
-from app.core.db import engine, init_db
-from app.main import app
-from app.models import Item, User
-from tests.utils.user import authentication_token_from_email
-from tests.utils.utils import get_superuser_token_headers
+
+# Add project root to path before shared.config import
+from pathlib import Path
+import sys
+project_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(project_root))
 
 
 @pytest.fixture(scope="session", autouse=True)

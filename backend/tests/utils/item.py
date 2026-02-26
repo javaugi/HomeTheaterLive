@@ -1,4 +1,11 @@
-from sqlmodel import Session
+from sqlalchemy.orm import Session
+
+# Add project root to path before shared.config import
+from pathlib import Path
+import sys
+project_root = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(project_root))
+
 
 from app import crud
 from app.models import Item, ItemCreate
