@@ -6,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 
-from .core.config import settings
+from app.core.config import settings
 
 
 @asynccontextmanager
@@ -40,21 +40,23 @@ async def lifespan(app: FastAPI):
     app.state.downloads_dir = settings.DOWNLOADS_DIR
 
     # Configuration dump
-    print(f"\nDEBUG: Mobile Configuration:  MOBILE_API_BASE_URL: {settings.MOBILE_API_BASE_URL}")
+    print(f"\nDEBUG: Mobile Configuration:  MOBILE_API_BASE_URL: {
+          settings.MOBILE_API_BASE_URL}")
     print(f"  API_TIMEOUT_SECONDS: {settings.API_TIMEOUT_SECONDS}")
     print(f"  OFFLINE_MODE_ENABLED: {settings.OFFLINE_MODE_ENABLED}")
     print(f"  MOBILE_CACHE_SIZE: {settings.MOBILE_CACHE_SIZE}")
-    print(f"  PUSH_NOTIFICATIONS_ENABLED: {settings.PUSH_NOTIFICATIONS_ENABLED}")
+    print(f"  PUSH_NOTIFICATIONS_ENABLED: {
+          settings.PUSH_NOTIFICATIONS_ENABLED}")
 
     # Initialize mobile services
     print("\nDEBUG: Initializing mobile services...")
     from .services.cache import init_cache_service
-    #from .services.auth import init_auth_service
-    #from .services.sync import init_sync_service
+    # from .services.auth import init_auth_service
+    # from .services.sync import init_sync_service
 
     app.state.cache_service = await init_cache_service(settings.MOBILE_CACHE_SIZE)
-    #app.state.auth_service = await init_auth_service()
-    #app.state.sync_service = await init_sync_service()
+    # app.state.auth_service = await init_auth_service()
+    # app.state.sync_service = await init_sync_service()
 
     print("DEBUG: Mobile services initialized")
 
@@ -65,15 +67,18 @@ async def lifespan(app: FastAPI):
         import httpx
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.get(backend_url)
-            print(f"\nDEBUG: Health check from url={backend_url} with return value={response}")
-            print(f"DEBUG: Backend URL: {backend_url}, Connectivity Status: ✓ (HTTP {response.status_code})")
+            print(f"\nDEBUG: Health check from url={
+                  backend_url} with return value={response}")
+            print(f"DEBUG: Backend URL: {
+                  backend_url}, Connectivity Status: ✓ (HTTP {response.status_code})")
             if response.status_code == 200:
                 app.state.backend_connected = True
             else:
                 app.state.backend_connected = False
                 print(f"DEBUG: Backend returned non-200: {response.text}")
     except Exception as e:
-        print(f"DEBUG: Backend connectivity: ✗ ({type(e).__name__}: {str(e)}) from uri={backend_url}")
+        print(f"DEBUG: Backend connectivity: ✗ ({
+              type(e).__name__}: {str(e)}) from uri={backend_url}")
         app.state.backend_connected = False
 
     print("\n" + "="*60)
@@ -136,7 +141,7 @@ async def log_mobile_requests(request: Request, call_next):
     headers = dict(request.headers)
     sensitive = ['authorization', 'cookie', 'token', 'password']
     safe_headers = {k: v for k, v in headers.items()
-                   if not any(s in k.lower() for s in sensitive)}
+                    if not any(s in k.lower() for s in sensitive)}
     print(f"  Headers: {safe_headers}")
 
     # Log query params
@@ -265,5 +270,4 @@ if __name__ == "__main__":
         port=port,
         reload=settings.ENVIRONMENT == "local",
         log_level="debug" if settings.ENVIRONMENT == "local" else "info",
-    )# -*- coding: utf-8 -*-
-
+    )  # -*- coding: utf-8 -*-

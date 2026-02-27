@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 import toga
 from toga.style import Pack

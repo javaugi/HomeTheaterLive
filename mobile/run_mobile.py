@@ -1,122 +1,25 @@
-# run_servers.py
-import subprocess
-import sys
-import time
-from pathlib import Path
-
-sys.stdout.reconfigure(encoding="utf-8")
-
-def run_mobile():
-    """Run mobile server - returns Popen object"""
-    print("📱 Starting Mobile Server...")
-    # Wait a bit for backend to initialize
-    time.sleep(2)
-
-    proc = subprocess.Popen([
-        sys.executable, "-m", "uvicorn",
-        "app.main:app",
-        "--host", "0.0.0.0",
-        "--port", "8001",
-        "--reload"
-    ], cwd=Path(__file__).parent)
-    return proc
-
-def check_ports():
-    """Check if ports are available"""
-    import socket
-
-    def port_in_use(port):
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(1)
-            return s.connect_ex(('localhost', port)) == 0
-
-    print("🔍 Checking ports...")
-    if port_in_use(8001):
-        print("❌ Mobile Port 8001 is already in use!")
-        return False
-
-    print("✅ Port 8001 is available")
-    return True
-
-def print_server_info():
-    """Print server information"""
-    print("\n" + "="*60)
-    print("🏠 HomeTheaterLive Servers")
-    print("="*60)
-    print("   Mobile API:   http://localhost:8001")
-    print("   Mobile Docs:  http://localhost:8001/docs")
-    print("="*60)
-    print("\n📋 Press Ctrl+C to stop all servers")
-    print("="*60 + "\n")
-
-def main():
-    print("Main function to run mobile server")
-
-    if not check_ports():
-        print("\n⚠️  Please free up ports 8000 and 8001 before continuing.")
-        sys.exit(1)
-
-    processes = []
-
-    try:
-        # Start mobile
-        print("\n" + "-"*40)
-        print("⏳ Waiting for mobile to initialize...")
-        mobile_proc = run_mobile()
-        processes.append(mobile_proc)
-
-        # Wait a moment for mobile to start
-        time.sleep(2)
-
-        # Print server info
-        print_server_info()
-
-        # Monitor processes
-        while True:
-            all_running = True
-
-            # Check if any process has died
-            for i, proc in enumerate(processes):
-                if proc.poll() is not None:  # Process has terminated
-                    server_name = "Backend" if i == 0 else "Mobile"
-                    print(f"❌ {server_name} server stopped unexpectedly (exit code: {proc.returncode})")
-                    all_running = False
-
-            if not all_running:
-                print("⚠️  One or more servers stopped. Shutting down...")
-                break
-
-            time.sleep(2)  # Check every 2 seconds
-
-    except KeyboardInterrupt:
-        print("\n\n🛑 Received shutdown signal...")
-
-    finally:
-        # Cleanup all processes
-        print("\n" + "="*60)
-        print("🧹 Cleaning up processes...")
-
-        for i, proc in enumerate(processes):
-            if proc and proc.poll() is None:  # Process is still running
-                server_name = "Backend" if i == 0 else "Mobile"
-                print(f"  Stopping {server_name} server...")
-
-                # Try graceful shutdown first
-                proc.terminate()
-
-                # Wait for termination
-                try:
-                    proc.wait(timeout=5)
-                    print(f"  ✅ {server_name} server stopped gracefully")
-                except subprocess.TimeoutExpired:
-                    print(f"  ⚠️  {server_name} server not responding, forcing kill...")
-                    proc.kill()
-                    proc.wait()
-                    print(f"  ✅ {server_name} server killed")
-
-        print("\n✅ All servers stopped.")
-        print("="*60)
+#!/usr/bin/env python
+"""
+run_mobile.py - Run Mobile Toga app from HomeTheaterLive/mobile directory
+"""
 
 if __name__ == "__main__":
-    print("Starting up mobile server main entered ...")
-    main()
+    print("🚀 Starting Mobile Toga App from HomeTheaterLive/mobile ...")
+    import subprocess
+    import sys
+
+    # Option 1: Run the main Python file directly
+    # mobile_main = Path(__file__).parent / "app" / "main.py"
+    # proc = subprocess.Popen([
+    #     sys.executable, str(mobile_main)
+    # ])
+
+    # Option 2: If it's a Briefcase app, you might need:
+    # proc = subprocess.Popen([
+    #     sys.executable, "-m", "briefcase", "run"
+    # ], cwd=Path(__file__).parent)
+
+    # Run uvicorn from backend directory
+    subprocess.run([
+        sys.executable, "-m", "briefcase", "dev"
+    ])

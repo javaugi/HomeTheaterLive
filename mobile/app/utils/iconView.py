@@ -1,12 +1,12 @@
 import toga
 from toga.style import Pack
-from toga.style.pack import COLUMN, ROW, CENTER
 from pathlib import Path
+
 
 class IconView(toga.Box):
     def __init__(self, icon_name=None, size=50, **kwargs):
-        #super().__init__(style=Pack(width=size, height=size, **kwargs))
-        #super().__init__(style=Pack(direction=COLUMN, flex=1, **kwargs))
+        # super().__init__(style=Pack(width=size, height=size, **kwargs))
+        # super().__init__(style=Pack(direction=COLUMN, flex=1, **kwargs))
 
         self.icon_name = icon_name
         self.size = size
@@ -28,7 +28,8 @@ class IconView(toga.Box):
             # Check in resources directory
             Path(__file__).parent / "resources" / f"{self.icon_name}.png",
             Path(__file__).parent / "resources" / f"{self.icon_name}.jpg",
-            Path(__file__).parent / "resources" / "icons" / f"{self.icon_name}.png",
+            Path(__file__).parent / "resources" /
+            "icons" / f"{self.icon_name}.png",
             # Check in current directory
             Path.cwd() / f"{self.icon_name}.png",
         ]

@@ -3,16 +3,16 @@
 My Home Theater Application to manipulate photos, images, videos and films with integated AI functions
 """
 import asyncio
-from .views.home_view import HomeView
-from .views.login_view import LoginView
-from .storage import SecureStorage
+from app.views.home_view import HomeView
+from app.views.login_view import LoginView
+from app.storage import SecureStorage
 import toga
 print(">>> importing mobile/app/app.py done")
 
 
 class MyHomeTheater(toga.App):
-    def __init__(self, formal_name=None):
-        super().__init__(formal_name)
+    def __init__(self, formal_name=None, domain_name=None):
+        super().__init__(formal_name, domain_name)
 
         self.headers = {"Content-Type": "application/json"}
         # Views
@@ -40,6 +40,7 @@ class MyHomeTheater(toga.App):
             print(
                 "mobile/app/app.py User authenticated, loading HomeView at mobile/app/views/home_view.py")
             self.main_window.content = self.home_view
+            # self.main_window.content = self.home_view
             # Start background tasks if needed
             asyncio.create_task(self.background_tasks())
         else:
@@ -50,7 +51,7 @@ class MyHomeTheater(toga.App):
 
 
 def main():
-    return MyHomeTheater()
+    return MyHomeTheater("Home Theater Live", "com.sisllc.hometheater")
 
 
 """

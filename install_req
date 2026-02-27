@@ -1,7 +1,7 @@
 #!/bin/sh
-clear
 echo "Install requirements"
 pip install -r requirements.txt
+uv sync
 echo "Check installation"
 pip check
 

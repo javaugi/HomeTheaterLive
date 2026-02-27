@@ -1,0 +1,11 @@
+# Kill process on port 8000
+#lsof -ti:8000 | xargs kill -9
+
+# Or:
+#kill -9 $(lsof -ti:8000)
+
+# For port 8001:
+#kill -9 $(lsof -ti:8001)
+
+# Kill multiple ports at once:
+lsof -ti:8000,8001 | xargs kill -9

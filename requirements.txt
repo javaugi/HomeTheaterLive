@@ -29,7 +29,7 @@ pillow
 psycopg[binary]
 pydantic
 pydantic[email]
-#pydantic-core==2.41.5
+pydantic-core==2.41.5
 pylint
 PyJWT[crypto]
 pytest-asyncio

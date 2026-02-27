@@ -1,4 +1,0 @@
-#!/bin/sh
-clear
-cd backend
-python run_backend.py

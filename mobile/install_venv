@@ -3,5 +3,7 @@ clear
 pip cache purge
 pip install --upgrade pip
 ./versions
+echo "Setup Virtual Env"
 python -m venv .venv
-source ./venv/Scripts/activate
+source .venv/Scripts/activate
+echo "Done Setup Virtual Env"

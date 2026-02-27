@@ -1,9 +1,9 @@
 # backend/app/main.py
-from .api.endpoints import router as endpoints_router
-from .api.main import router as main_router
-from .api.auth import router as auth_router
-from .api.routes import watch, recommendations
-from .core.config import settings
+from app.api.endpoints import router as endpoints_router
+from app.api.main import router as main_router
+from app.api.auth import router as auth_router
+from app.api.routes import watch, recommendations
+from app.core.config import settings
 from pathlib import Path
 import sys
 import os

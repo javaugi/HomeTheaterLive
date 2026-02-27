@@ -1,0 +1,6 @@
+#!/bin/sh
+./install_venv
+./install_req
+#
+echo "Starting servers ..."
+python run_all_cwd.py

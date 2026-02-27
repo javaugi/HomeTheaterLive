@@ -38,12 +38,24 @@ class VideoView:
     def __init__(self, app, navigate_back_callback=None,
                  backend_api_url: str = settings.BACKEND_API_URL,
                  output_dir: str = str(settings.VIDEO_OUTPUT_DIR)):
+
+        # Call parent __init__ first
+        super().__init__()
+
         self.app = app
         self.app.api_base_url = backend_api_url
         self.navigate_back_callback = navigate_back_callback
 
         self.output_dir = output_dir
         os.makedirs(output_dir, exist_ok=True)
+
+        # Get initial window/screen sizes
+        # Get window from app
+        self.window = self.app.main_window
+        self.update_size()
+
+        # Bind resize event
+        self.window.on_resize = self.on_window_resize
 
         # Initialize UI elements to None
         self.init_ui_elements()
@@ -53,6 +65,15 @@ class VideoView:
         except Exception as e:
             print(f"DEBUG ERROR: VideoView Failed to build UI: {e}")
             raise
+
+    def update_size(self):
+        """Update stored size values"""
+        self.screen = self.window.screen
+        self.screen_width = self.screen.size.width
+        self.screen_height = self.screen.size.height
+
+        self.window_width = self.window.size.width
+        self.window_height = self.window.size.height
 
     async def get_api_client(self):
         """Get or create API client"""
@@ -94,15 +115,38 @@ class VideoView:
         self.transition_select = None
         self.quality_select = None
 
+    def on_window_resize(self, widget, **kwargs):
+        """Handle window resize event"""
+        # Update stored sizes
+        self.update_size()
+
+        # Recalculate based on new screen size
+        new_height = int(self.screen_height * 0.8)
+        print(f"DEBUG: Window resized to {self.window_width}x{self.window_height}, "
+              f"screen {self.screen_width}x{self.screen_height}, "
+              f"new target height {new_height}")
+
+        # Update container height if needed
+        if self.container.style.height != new_height:
+            self.container.style.height = new_height
+            self.container.refresh()
+
     def create_ui(self):
         """Create the video processing UI"""
         # Main container
+        # Get screen dimensions
+        target_height = int(self.screen_height * 0.8)
+        print(f"DEBUG: Screen size {self.screen_width}x{self.screen_height}, "
+              f"target_height {target_height}")
+
+        # Create main container with 90% screen height
         self.container = toga.Box(style=Pack(
             width=600,
+            height=target_height,
             direction=COLUMN,
             margin=0,
-            margin_bottom=20,
-            flex=1
+            margin_bottom=10,
+            flex=0  # Set to 0 to respect fixed height
         ))
 
         # Header with back button
@@ -113,13 +157,6 @@ class VideoView:
 
         # Status area
         self.create_status_area()
-
-        # add extra space at the bottom
-        footer_box = toga.Box(style=Pack(
-            direction=COLUMN,
-            height=30,
-            margin=0))
-        self.container.add(footer_box)
 
         return self.container
 
@@ -146,7 +183,7 @@ class VideoView:
 
         title_label = toga.Label(
             "Create Video from Images",
-            style=Pack(font_size=20, font_weight="bold", flex=1)
+            style=Pack(font_size=16, font_weight="bold", flex=1)
         )
 
         header_box.add(icon)
@@ -183,34 +220,34 @@ class VideoView:
 
     def create_file_selection(self, parent):
         """Create file selection section"""
-        section_box = toga.Box(style=Pack(direction=COLUMN, margin=10))
+        section_box = toga.Box(style=Pack(direction=COLUMN, margin=5))
 
         # Section title
         title_box = toga.Box(style=Pack(direction=ROW, margin_bottom=5))
-        folder_icon = load_icon("folder", size=24)
+        folder_icon = load_icon("folder", size=20)
         title_label = toga.Label(
             "Select Images",
-            style=Pack(font_size=18, font_weight="bold", margin_left=10)
+            style=Pack(font_size=18, font_weight="bold", margin_left=5)
         )
         title_box.add(folder_icon)
         title_box.add(title_label)
         section_box.add(title_box)
 
         # Button row
-        button_row = toga.Box(style=Pack(direction=ROW, margin=10))
+        button_row = toga.Box(style=Pack(direction=ROW, margin=5))
 
         # Pick Images button
         self.pick_images_btn = toga.Button(
             "📷 Pick Images",
             on_press=self.pick_images,
-            style=Pack(flex=1, margin=10, background_color="#4CAF50")
+            style=Pack(flex=1, margin=5, background_color="#4CAF50")
         )
 
         # Pick Directory button
         self.pick_directory_btn = toga.Button(
             "📂 Pick Directory",
             on_press=self.pick_directory,
-            style=Pack(flex=1, margin=10, margin_left=10,
+            style=Pack(flex=1, margin=5, margin_left=10,
                        background_color="#2196F3")
         )
 
@@ -234,9 +271,8 @@ class VideoView:
             readonly=True,
             placeholder="No images selected\n\nClick 'Pick Images' or 'Pick Directory' to select images",
             style=Pack(
-                height=80,
-                margin=10,
-                margin_top=10,
+                height=100,
+                margin=5,
                 background_color="#fafafa",
                 # border_color="#ddd",
                 # border_width=1
@@ -245,7 +281,7 @@ class VideoView:
         section_box.add(self.file_list)
 
         parent.add(section_box)
-        parent.add(toga.Divider(style=Pack(margin=10)))
+        parent.add(toga.Divider(style=Pack(margin=5)))
 
         return section_box
 
@@ -1185,7 +1221,7 @@ class VideoView:
             # Create actual video using OpenCV
             # await self.create_actual_video(fps, duration_per_image, transition, quality)
             await self.create_video_with_ffmpeg(fps, duration_per_image, transition, quality)
-            """3. Alternative: Using FFmpeg (Recommended for Better H.264)
+            """3. Alternative: Using FFmpeg(Recommended for Better H.264)
             Key Changes:
             1. H.264 Codec Support: Uses libx264 codec via FFmpeg or OpenCV's H.264 codec
             2. Even Dimensions: Ensures width and height are even numbers (H.264 requirement)
@@ -2136,11 +2172,10 @@ class VideoView:
                       save_path}")
 
             save_result = None
-            if settings.USE_PATH_DOWNLOAD_CALL:
-                self.current_video_path = os.path.join(
-                    self.output_dir, self.current_video_filename)
-                print(f"VideoProcessor perform_download current_video_path={
-                      self.current_video_path}")
+            self.current_video_path = os.path.join(
+                self.output_dir, self.current_video_filename)
+            print(f"VideoProcessor perform_download current_video_path={
+                  self.current_video_path}")
 
             print(f"DEBUG: VideoView perform_download from path {
                   self.current_video_path} or url {self.current_video_url} to {save_path}")
@@ -2166,31 +2201,40 @@ class VideoView:
                 raise RuntimeError(save_result.get(
                     'error', 'VideoView perform_download Unknown error during save'))
 
-            self.update_progress(70)
-            self.update_status("Finalizing...")
+            self.update_progress(90)
+            self.update_status("Finalizing file download ...")
 
             # Verify the file
             if not os.path.exists(save_path):
                 raise FileNotFoundError(
                     f"VideoView perform_download Video was not saved to {save_path}")
 
+            source_size = os.path.getsize(self.current_video_path)
             file_size = os.path.getsize(save_path)
+            print(f"DEBUG: VideoView perform_download source_size {
+                  source_size} copied file_size {file_size}")
             if file_size == 0:
                 raise ValueError(
                     "VideoView perform_download Saved video file is empty")
 
-            self.update_progress(90)
+            if file_size != source_size:
+                raise ValueError(
+                    f"VideoView perform_download Saved video file size {file_size} does not match source size {source_size}")
+
+            self.update_progress(95)
             self.update_status(f"Video saved! ({await self._format_bytes(file_size)})")
 
             # Get video info for confirmation
             video_info = self._get_video_file_info(save_path)
             formatted_size = await self._format_bytes(file_size)
+            formatted_src_size = await self._format_bytes(source_size)
             exists = os.path.exists(save_path)
             readable = os.access(save_path, os.R_OK)
             print(
                 f"DEBUG:VideoView    perform_download Video saved successfully: \n   - Path: {save_path}")
             print(f"  - Filename:    {os.path.basename(save_path)} ")
-            print(f"  - Size:        {file_size} bytes (formatted_size)")
+            print(f"  - Source Size: {source_size} bytes {formatted_src_size}")
+            print(f"  - File Size:   {file_size} bytes {formatted_size}")
             print(f"  - Exists:      {exists} - Readable: {readable}")
             print(f"  - Video_info:  {video_info}")
             print(f"  - Save_result: {save_result}")
@@ -2324,6 +2368,13 @@ class VideoView:
                                 print(
                                     f"DEBUG:video_view.py save_video_file_by_url Downloading {progress}")
 
+            # Optional: check if file looks like valid MP4 (magic bytes, ffprobe, etc.)
+            # Get source file info
+            source_size = os.path.getsize(self.current_video_path)
+            file_size = os.path.getsize(self.current_video_path)
+            print(f"DEBUG: VideoView Source video size: {
+                  source_size} bytes, Destination video size: {file_size} bytes")
+
             return {
                 "success": True,
                 "save_path": save_path,
@@ -2375,7 +2426,11 @@ class VideoView:
                     raise ValueError(f"Incomplete download: got {
                                      received} of {expected_size} bytes")
 
-                # Optional: check if file looks like valid MP4 (magic bytes, ffprobe, etc.)
+            return {
+                "success": True,
+                "save_path": save_path,
+                "filename": os.path.basename(save_path),
+            }
 
         except Exception as e:
             msg: str = f"save_video_file_by_url Download failed: {e}"
