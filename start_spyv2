@@ -1,0 +1,12 @@
+#!/bin/sh
+clear
+python -m venv spyder_env
+spyder_env/Scripts/activate
+pip install --upgrade urllib3==1.26.18
+pip install --upgrade chardet==5.2.0
+pip install --upgrade charset-normalizer==3.3.2
+pip install --upgrade requests==2.31.0
+spyder.exe &
+
+
+
