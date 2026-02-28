@@ -251,6 +251,10 @@ class HomeView(toga.Box):
 
         return item_box
 
+    def run_async(coro):
+        print(f"HomeView run_async {coro}")
+        asyncio.create_task(coro)
+
     def navigate_back_to_home(self):
         """Navigate back to home view"""
         self.app.main_window.content = self
@@ -330,7 +334,7 @@ class HomeView(toga.Box):
                 background_color="#2d3047",
                 color="white",
                 font_size=20,
-                margin=5,
+                margin=15,
                 # border_radius=30
             )
         )
@@ -354,7 +358,7 @@ class HomeView(toga.Box):
         """Create scrollable content sections"""
         # Create a scroll container
         scroll_container = toga.ScrollContainer(style=Pack(
-            height=60,
+            height=100,
             flex=1
         ))
         content_box = toga.Box(style=Pack(direction=COLUMN))
@@ -401,7 +405,7 @@ class HomeView(toga.Box):
     def _create_section(self, parent, title, action_text, action_callback, content_container):
         """Helper to create a content section"""
         section_box = toga.Box(style=Pack(
-            direction=COLUMN, margin=10, margin_left=15))
+            direction=COLUMN, margin=10, margin_left=20))
 
         # Section header
         header_box = toga.Box(style=Pack(direction=ROW, margin_bottom=5))
@@ -412,7 +416,7 @@ class HomeView(toga.Box):
         action_btn = toga.Button(
             action_text,
             on_press=action_callback,
-            style=Pack(color="#4dabf7", font_size=14)
+            style=Pack(color="blue", font_size=14)
         )
         header_box.add(title_label, action_btn)
 
@@ -420,7 +424,7 @@ class HomeView(toga.Box):
         content_container = toga.Box(style=Pack(direction=ROW))
 
         # Add placeholder items
-        for i in range(3):
+        for i in range(5):
             placeholder = self._create_content_card(f"Item {i+1}")
             content_container.add(placeholder)
 
@@ -677,7 +681,7 @@ class HomeView(toga.Box):
     async def logout(self, widget):
         """Handle logout"""
         self.storage.clear()
-        from .login import LoginView
+        from .login_view import LoginView
         self.app.main_window.content = LoginView(self.app)
 
     async def show_error_dialog(self, message):

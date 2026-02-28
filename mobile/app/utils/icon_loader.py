@@ -96,7 +96,7 @@ def create_icon_button(icon_name, text, on_press, size=30):
     Returns:
         Toga Box containing icon and label
     """
-    box = toga.Box(style=Pack(direction='column', alignment='center'))
+    box = toga.Box(style=Pack(direction='column', align_items='center'))
 
     # Add icon
     icon = load_icon(icon_name, size=size)

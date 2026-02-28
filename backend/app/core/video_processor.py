@@ -16,8 +16,7 @@ import asyncio
 from typing import List, Optional, Tuple, Dict
 import os
 import numpy as np
-
-# from midi2audio import FluidSynth
+from midi2audio import FluidSynth
 
 logger = logging.getLogger(__name__)
 print(">>> importing VideoProcessor done")
@@ -332,6 +331,21 @@ class VideoProcessor:
                 video_writer.release()
             cv2.destroyAllWindows()
 
+    """
+    Goal                          How to do it                Typical values
+    Overall faster/slower         Change bpm = ...            "60–80 slow, 100–130 medium, 140+ fast"
+    Speed changes during piece    "Multiple midi.addTempo(track, time, bpm)",Call at different time in beats
+    More interesting melody,Use varied pitch lists + phrases,"Add leaps, higher/lower sections"
+    More lively rhythm,Variable duration per note,Mix 0.25–2.0 beats
+    More dynamic (loud/soft),Vary volume (velocity),"50–70 soft, 90–110 normal, accents 115+"
+    
+    
+    Start with just changing bpm → then add one tempo change → then experiment 
+        with melody/rhythm.
+    If you share what feeling you're going for (calm ambient, upbeat positive, 
+        dramatic, minimal piano, etc.), I can suggest more specific note patterns or progressions.   
+    """
+
     def _generate_background_music(
         self,
         output_wav: str,
@@ -342,19 +356,36 @@ class VideoProcessor:
         """Generate pleasant piano-based background music via MIDI → WAV"""
         if soundfont_path is None:
             soundfont_path = self.soundfont_path
+
         print(f"VideoProcessor _generate_background_music soundfont_path={
               os.path.exists(soundfont_path)}")
+
         if not os.path.exists(soundfont_path):
             raise FileNotFoundError(f"SoundFont not found: {
                                     soundfont_path}. Download FluidR3_GM.sf2")
 
         midi_path = output_wav.replace(".wav", ".mid")
 
-        midi = MIDIFile(1)
+        midi = MIDIFile(1)  # 1 track
         track = 0
         channel = 0
         time = 0
         midi.addTempo(track, time, bpm)
+
+        # Example: gradual speedup (accelerando)
+        # after 8 beats → faster
+        midi.addTempo(track, 8,  95)
+        # after more time → even faster
+        midi.addTempo(track, 24, 110)
+        # after 8 beats → faster
+        midi.addTempo(track, 8,  95)
+        # ritardando / slower part
+        midi.addTempo(track, 24, 70)
+        # ritardando / slower part
+        midi.addTempo(track, 24, 95)
+        midi.addTempo(track, 48, 125)                   # later section quicker
+        # Or: slow middle section
+        # midi.addTempo(track, 32, 70)                  # ritardando / slower part
 
         # Chord progression: C → Am → F → G (pleasant & common)
         chords = [
@@ -363,7 +394,7 @@ class VideoProcessor:
             [53, 57, 60],     # F
             [55, 59, 62],     # G
         ]
-        chord_beats = 4
+        chord_beats = 4  # beats per chord
 
         # Repeat chords enough times
         repeats = int(total_duration_sec / (chord_beats * 60 / bpm)) + 2
@@ -372,10 +403,43 @@ class VideoProcessor:
                 midi.addNote(track, channel, note, time, chord_beats, 82)
             time += chord_beats
 
+        # Example: rising then falling phrases + some leaps
+        melody_pattern = [
+            72, 74, 76, 79, 81, 83, 81, 79,     # rising
+            76, 74, 72, 69, 67, 72,             # falling + lower note
+            74, 77, 81, 84, 81, 77, 74, 72,     # another phrase with higher peak
+            79, 76, 72, 67                      # ending lower
+        ]
+        melody_notes = melody_pattern * 6  # repeat enough times
+        # or even better: create 3-4 short phrases and concatenate them
         # Light melody overlay (channel 1 - e.g. bells or strings)
-        melody_notes = [72, 74, 76, 77, 79, 81, 79, 77] * 12
-        for i, pitch in enumerate(melody_notes):
-            midi.addNote(track, 1, pitch, i * 0.8, 1.1, 95)
+        # melody_notes = [72, 74, 76, 77, 79, 81, 79, 77, 74] * 12
+        # for i, pitch in enumerate(melody_notes):
+        #     midi.addNote(track, 1, pitch, i * 0.8, 1.1, 95)
+
+        # Add rhythmic variation (some notes shorter/longer)
+        # Example rhythms in beats: 0.5 = eighth note, 1.0 = quarter, 1.5 = dotted quarter, etc.
+        # rhythms = [1.0, 0.5, 0.5, 1.0, 0.75, 0.25, 1.0, 0.5] * 10
+        # current_time = 0
+        # for i, (pitch, dur) in enumerate(zip(melody_notes, rhythms)):
+        #     midi.addNote(track, 1, pitch, current_time, dur, 95 +
+        #                  (i % 20 - 10))  # slight velocity variation
+        #     current_time += dur
+
+        rhythms = [1.0, 0.5, 0.5, 1.0, 0.75, 0.25,
+                   1.0, 0.5] * (len(melody_notes) // 8 + 1)
+        current_time = 0
+        for pitch, dur in zip(melody_notes, rhythms):
+            vel = 80 + (pitch - 72) * 3 + (int(current_time * 2) %
+                                           20 - 10)  # fluctuation
+            vel = max(50, min(115, vel))
+            midi.addNote(track, 1, pitch, current_time, dur, vel)
+            current_time += dur
+
+        # Optional: speed up towards end
+        if current_time > 60:
+            midi.addTempo(track, current_time - 8, 105)   # last 8 beats faster
+
         print(f"VideoProcessor _generate_background_music midi_path={
               midi_path}")
 
@@ -385,6 +449,7 @@ class VideoProcessor:
 
         print(f"VideoProcessor _generate_background_music midi_path={
               os.path.exists(midi_path)}")
+
         # ── 2. Find fluidsynth.exe ──
         # Common locations on Windows – adjust if yours is different
         possible_fluidsynth_paths = [
@@ -408,7 +473,7 @@ class VideoProcessor:
         # ── 3. Run FluidSynth command (modern flags that work on Windows) ──
         cmd = [
             fluidsynth_exe,
-            "-ni",                      # no interactive shell
+            "-i",                      # no interactive shell
             "-F", output_wav,           # output file
             "-r", "44100",              # sample rate
             "-g", "0.8",                # gain (0.5–1.5, lower = quieter)
@@ -424,28 +489,30 @@ class VideoProcessor:
             check=False   # we'll check manually
         )
 
-        print(f"VideoProcessor _generate_background_music Running Success → WAV created: output_wav={
+        print(f"VideoProcessor _generate_background_music Running Success → WAV created exists{
+              os.path.exists(output_wav)}, output_wav={
               output_wav}, midi_path={midi_path}, cmd result.returncode={result.returncode}")
         if result.returncode != 0:
-            print("FluidSynth stdout:\n", result.stdout)
-            print("FluidSynth stderr:\n", result.stderr)
+            print(f"\n FluidSynth stdout: {
+                  result.stdout}, \n FluidSynth stderr:\n {result.stderr}")
             raise RuntimeError(
                 f"FluidSynth failed (code {result.returncode}) – see output above")
 
-        """
+        # ====================== 2. RENDER MIDI → WAV (high quality) ======================
         # Render MIDI → WAV with nice quality using FluidSynth
-        print(f"VideoProcessor _generate_background_music output_wav={output_wav}, soundfont_path={soundfont_path}")
+        """ This is a fallback method
+        print(f"VideoProcessor _generate_background_music output_wav={
+              output_wav}, soundfont_path={soundfont_path}")
         try:
             fs = FluidSynth(sound_font=soundfont_path)
             fs.midi_to_audio(midi_path, output_wav)
         except Exception as e:
-            print(f"VideoProcessor _generate_background_music FluidSynth error {str(e)}")
+            print(
+                f"VideoProcessor _generate_background_music FluidSynth error {str(e)}")
             self._generate_background_music_fallback(
                 output_wav, midi_path, soundfont_path)
         """
 
-        print(f"VideoProcessor _generate_background_music done: found output_wav: {
-              os.path.exists(output_wav)}")
         # Optional: clean up midi
         try:
             os.remove(midi_path)

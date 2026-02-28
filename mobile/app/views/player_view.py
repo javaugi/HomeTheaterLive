@@ -68,7 +68,7 @@ class PlayerView(toga.Box):
             flex=1,
             background_color="#000000",
             direction=COLUMN,
-            alignment="center"
+            align_items=CENTER
         ))
 
         # Play button in center
@@ -125,7 +125,7 @@ class PlayerView(toga.Box):
             direction=ROW,
             margin=20,
             background_color="#1a1a1a",
-            alignment=CENTER
+            align_items=CENTER
         ))
 
         # Rewind
