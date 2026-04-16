@@ -4,7 +4,7 @@ save_data_on_exit = True
 save_history = True
 save_non_project_files = False
 project_type = 'empty-project-type'
-recent_files = ['mobile\\app\\views\\home_view.py', 'mobile\\app\\views\\video_view.py', 'backend\\app\\api\\endpoints.py', 'backend\\app\\core\\video_processor.py']
+recent_files = ['start_spyder', 'start_spyv2', 'install_venv', 'install_all', 'requirements.txt']
 
 [main]
 version = 0.2.0

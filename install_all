@@ -2,6 +2,9 @@
 clear
 echo "set up virtual environments"
 ./install_venv
+pip install --upgrade pip
+pip install "watchdog<5" --force-reinstall
+#conda update --all
 echo "set up requirements"
 pip install -r requirements.txt
 echo "Check installation"

@@ -1,6 +1,6 @@
 #!/bin/sh
 clear
-./install_venv
+#./install_venv
 ./install_all
 alias run_spyder='PATH="/c/ProgramData/anaconda3/Scripts" spyder.exe &'
 run_spyder

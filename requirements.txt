@@ -29,7 +29,7 @@ pillow
 psycopg[binary]
 pydantic
 pydantic[email]
-pydantic-core==2.41.5
+pydantic-core>=2.41.5
 pylint
 PyJWT[crypto]
 pytest-asyncio
@@ -49,8 +49,8 @@ starlette
 streamlit
 sympy
 toga
-urllib3<2
+urllib3>=2.2.2
 uvicorn
-watchdog==4.0.1
+watchdog>=4.0.1
 websockets
 Werkzeug
